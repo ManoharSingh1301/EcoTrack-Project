@@ -36,11 +36,11 @@ function App() {
   return (
     <ThemeProvider>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-green-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-500">
+        <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-gray-50 to-green-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-500">
           <SpotlightBackground />
           <Navbar user={user} onLogout={handleLogout} />
           <GlassSidebar user={user} />
-          <main className={`container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative z-10 ${user ? 'lg:ml-56 xl:ml-64' : ''} transition-all duration-300`}>
+          <main className={`w-full min-w-0 container mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 pb-6 sm:pb-8 relative z-10 ${user ? 'lg:ml-56 xl:ml-64 lg:w-[calc(100%-14rem)] xl:w-[calc(100%-16rem)]' : ''} transition-all duration-300`}>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route 
