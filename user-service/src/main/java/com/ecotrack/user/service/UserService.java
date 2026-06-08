@@ -5,6 +5,7 @@ import com.ecotrack.user.dto.LoginResponse;
 import com.ecotrack.user.model.User;
 import com.ecotrack.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,6 +16,9 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
@@ -39,7 +43,8 @@ public class UserService {
         if (userRepository.existsByEmail(user.getEmail())) {
             throw new RuntimeException("Email already exists");
         }
-        // In production, hash the password with BCrypt
+        // Hash the password with BCrypt
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
 
@@ -54,7 +59,8 @@ public class UserService {
         user.setBio(userDetails.getBio());
 
         if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
-            user.setPassword(userDetails.getPassword());
+            // Hash the password with BCrypt before updating
+            user.setPassword(passwordEncoder.encode(userDetails.getPassword()));
         }
 
         return userRepository.save(user);
@@ -70,8 +76,8 @@ public class UserService {
         User user = userRepository.findByUsername(loginRequest.getUsername())
                 .orElseThrow(() -> new RuntimeException("Invalid username or password"));
 
-        // In production, verify the password with BCrypt
-        if (!user.getPassword().equals(loginRequest.getPassword())) {
+        // Verify the password with BCrypt
+        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid username or password");
         }
 
@@ -80,7 +86,6 @@ public class UserService {
                 user.getUsername(),
                 user.getEmail(),
                 user.getFullName(),
-                "Login successful"
-        );
+                "Login successful");
     }
 }
