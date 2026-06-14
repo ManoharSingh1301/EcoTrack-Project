@@ -21,6 +21,7 @@
    ```sql
    CREATE DATABASE IF NOT EXISTS db_items;
    CREATE DATABASE IF NOT EXISTS db_users;
+   CREATE DATABASE IF NOT EXISTS db_communication;
    ```
 
 ### Option 2: Using MySQL Workbench
@@ -47,6 +48,15 @@ Tables will be auto-created by Spring Boot:
 
 Tables will be auto-created by Spring Boot:
 - `users` - stores user profiles and credentials
+
+### Communication Service Database: `db_communication`
+- **Host:** localhost:3306
+- **Username:** root
+- **Password:** admin
+
+Tables will be auto-created by Spring Boot:
+- `chat_messages` - stores peer-to-peer chat history
+
 
 ## Changing Database Credentials
 
@@ -80,4 +90,8 @@ DESCRIBE items;
 USE db_users;
 SHOW TABLES;
 DESCRIBE users;
+
+USE db_communication;
+SHOW TABLES;
+DESCRIBE chat_messages;
 ```

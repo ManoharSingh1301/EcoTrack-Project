@@ -7,6 +7,9 @@ CREATE DATABASE IF NOT EXISTS db_items;
 -- Create database for User Service
 CREATE DATABASE IF NOT EXISTS db_users;
 
+-- Create database for Communication Service
+CREATE DATABASE IF NOT EXISTS db_communication;
+
 -- Show created databases
 SHOW DATABASES;
 
