@@ -4,10 +4,17 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "items")
+@Table(name = "items", indexes = {
+        @Index(name = "idx_items_owner_id", columnList = "ownerId"),
+        @Index(name = "idx_items_category", columnList = "category"),
+        @Index(name = "idx_items_available", columnList = "available"),
+        @Index(name = "idx_items_name", columnList = "name")
+})
 public class Item {
 
     @Id
@@ -15,9 +22,11 @@ public class Item {
     private Long id;
 
     @NotBlank(message = "Item name is required")
+    @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
     @Column(nullable = false)
     private String name;
 
+    @Size(max = 1000, message = "Description must not exceed 1000 characters")
     @Column(length = 1000)
     private String description;
 
@@ -25,6 +34,7 @@ public class Item {
     @Column(nullable = false)
     private Long ownerId;
 
+    @NotBlank(message = "Category is required")
     @Column(nullable = false)
     private String category;
 

@@ -1,15 +1,21 @@
 package com.ecotrack.user.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = {
+        @Index(name = "idx_users_username", columnList = "username", unique = true),
+        @Index(name = "idx_users_email", columnList = "email", unique = true)
+})
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
@@ -19,6 +25,7 @@ public class User {
     private Long id;
 
     @NotBlank(message = "Username is required")
+    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
     @Column(nullable = false, unique = true)
     private String username;
 
@@ -28,6 +35,8 @@ public class User {
     private String email;
 
     @NotBlank(message = "Password is required")
+    @Size(min = 8, message = "Password must be at least 8 characters")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(nullable = false)
     private String password;
 
@@ -36,8 +45,10 @@ public class User {
 
     private String address;
 
+    @Pattern(regexp = "^$|^[+]?[0-9]{10,15}$", message = "Phone number must be valid")
     private String phone;
 
+    @Size(max = 500, message = "Bio must not exceed 500 characters")
     @Column(length = 500)
     private String bio;
 
