@@ -4,6 +4,7 @@ import com.ecotrack.user.dto.LoginRequest;
 import com.ecotrack.user.dto.LoginResponse;
 import com.ecotrack.user.exception.AuthenticationException;
 import com.ecotrack.user.exception.DuplicateResourceException;
+import com.ecotrack.user.config.SecurityConfig;
 import com.ecotrack.user.exception.GlobalExceptionHandler;
 import com.ecotrack.user.exception.ResourceNotFoundException;
 import com.ecotrack.user.model.User;
@@ -15,7 +16,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.bean.MockBean;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -33,7 +34,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(UserController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class})
 @DisplayName("UserController Integration Tests")
 class UserControllerTest {
 
@@ -108,18 +109,14 @@ class UserControllerTest {
         @Test
         @DisplayName("should register user successfully")
         void shouldRegisterUserSuccessfully() throws Exception {
-            User newUser = new User();
-            newUser.setUsername("newuser");
-            newUser.setEmail("new@ecotrack.com");
-            newUser.setPassword("password123");
-            newUser.setFullName("New User");
-
             when(userService.createUser(any(User.class))).thenReturn(testUser);
+
+            String requestJson = "{\"username\":\"newuser\",\"email\":\"new@ecotrack.com\",\"password\":\"password123\",\"fullName\":\"New User\"}";
 
             mockMvc.perform(post("/api/users/register")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(newUser)))
+                            .content(requestJson))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.username", is("testuser")));
         }
@@ -127,19 +124,15 @@ class UserControllerTest {
         @Test
         @DisplayName("should return 409 when username already exists")
         void shouldReturn409WhenDuplicate() throws Exception {
-            User newUser = new User();
-            newUser.setUsername("existing");
-            newUser.setEmail("new@ecotrack.com");
-            newUser.setPassword("password123");
-            newUser.setFullName("New User");
-
             when(userService.createUser(any(User.class)))
                     .thenThrow(new DuplicateResourceException("User", "username", "existing"));
+
+            String requestJson = "{\"username\":\"existing\",\"email\":\"new@ecotrack.com\",\"password\":\"password123\",\"fullName\":\"New User\"}";
 
             mockMvc.perform(post("/api/users/register")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(newUser)))
+                            .content(requestJson))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.error", is("Conflict")));
         }
