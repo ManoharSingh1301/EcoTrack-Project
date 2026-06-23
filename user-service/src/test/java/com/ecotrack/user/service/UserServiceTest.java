@@ -2,6 +2,7 @@ package com.ecotrack.user.service;
 
 import com.ecotrack.user.dto.LoginRequest;
 import com.ecotrack.user.dto.LoginResponse;
+import com.ecotrack.user.dto.UserResponse;
 import com.ecotrack.user.exception.AuthenticationException;
 import com.ecotrack.user.exception.DuplicateResourceException;
 import com.ecotrack.user.exception.ResourceNotFoundException;
@@ -65,7 +66,7 @@ class UserServiceTest {
 
             when(userRepository.findAll()).thenReturn(Arrays.asList(testUser, user2));
 
-            List<User> result = userService.getAllUsers();
+            List<UserResponse> result = userService.getAllUsers();
 
             assertThat(result).hasSize(2);
             verify(userRepository).findAll();
@@ -81,7 +82,7 @@ class UserServiceTest {
         void shouldReturnUserWhenFound() {
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
 
-            Optional<User> result = userService.getUserById(1L);
+            Optional<UserResponse> result = userService.getUserById(1L);
 
             assertThat(result).isPresent();
             assertThat(result.get().getUsername()).isEqualTo("testuser");
@@ -92,7 +93,7 @@ class UserServiceTest {
         void shouldReturnEmptyWhenNotFound() {
             when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
-            Optional<User> result = userService.getUserById(999L);
+            Optional<UserResponse> result = userService.getUserById(999L);
 
             assertThat(result).isEmpty();
         }
@@ -120,10 +121,10 @@ class UserServiceTest {
                 return saved;
             });
 
-            User result = userService.createUser(newUser);
+            UserResponse result = userService.createUser(newUser);
 
             assertThat(result.getId()).isNotNull();
-            assertThat(result.getPassword()).isEqualTo("hashedPassword");
+            assertThat(result.getUsername()).isEqualTo("newuser");
             verify(passwordEncoder).encode("plainPassword");
             verify(userRepository).save(any(User.class));
         }
@@ -175,9 +176,10 @@ class UserServiceTest {
             updateDetails.setPhone("+9876543210");
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-            when(userRepository.save(any(User.class))).thenReturn(testUser);
+            when(userRepository.existsByEmail("updated@ecotrack.com")).thenReturn(false);
+            when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            User result = userService.updateUser(1L, updateDetails);
+            UserResponse result = userService.updateUser(1L, updateDetails);
 
             assertThat(result.getFullName()).isEqualTo("Updated Name");
             verify(userRepository).save(any(User.class));

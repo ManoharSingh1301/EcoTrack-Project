@@ -2,6 +2,7 @@ package com.ecotrack.user.controller;
 
 import com.ecotrack.user.dto.LoginRequest;
 import com.ecotrack.user.dto.LoginResponse;
+import com.ecotrack.user.dto.UserResponse;
 import com.ecotrack.user.exception.AuthenticationException;
 import com.ecotrack.user.exception.DuplicateResourceException;
 import com.ecotrack.user.config.SecurityConfig;
@@ -47,15 +48,16 @@ class UserControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private User testUser;
+    private UserResponse testUserResponse;
 
     @BeforeEach
     void setUp() {
-        testUser = new User();
-        testUser.setId(1L);
-        testUser.setUsername("testuser");
-        testUser.setEmail("test@ecotrack.com");
-        testUser.setFullName("Test User");
+        testUserResponse = UserResponse.builder()
+                .id(1L)
+                .username("testuser")
+                .email("test@ecotrack.com")
+                .fullName("Test User")
+                .build();
     }
 
     @Nested
@@ -66,7 +68,7 @@ class UserControllerTest {
         @WithMockUser
         @DisplayName("should return all users")
         void shouldReturnAllUsers() throws Exception {
-            when(userService.getAllUsers()).thenReturn(Arrays.asList(testUser));
+            when(userService.getAllUsers()).thenReturn(Arrays.asList(testUserResponse));
 
             mockMvc.perform(get("/api/users"))
                     .andExpect(status().isOk())
@@ -83,7 +85,7 @@ class UserControllerTest {
         @WithMockUser
         @DisplayName("should return user when found")
         void shouldReturnUserWhenFound() throws Exception {
-            when(userService.getUserById(1L)).thenReturn(Optional.of(testUser));
+            when(userService.getUserById(1L)).thenReturn(Optional.of(testUserResponse));
 
             mockMvc.perform(get("/api/users/1"))
                     .andExpect(status().isOk())
@@ -109,7 +111,7 @@ class UserControllerTest {
         @Test
         @DisplayName("should register user successfully")
         void shouldRegisterUserSuccessfully() throws Exception {
-            when(userService.createUser(any(User.class))).thenReturn(testUser);
+            when(userService.createUser(any(User.class))).thenReturn(testUserResponse);
 
             String requestJson = "{\"username\":\"newuser\",\"email\":\"new@ecotrack.com\",\"password\":\"password123\",\"fullName\":\"New User\"}";
 

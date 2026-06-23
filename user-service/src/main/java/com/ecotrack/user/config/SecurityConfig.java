@@ -30,6 +30,11 @@ public class SecurityConfig {
                                 "/api/users/register",
                                 "/api/users/login")
                         .permitAll()
+                        // Allow internal service-to-service calls (e.g., Feign from item-service)
+                        .requestMatchers(
+                                "/api/users/{id}",
+                                "/api/users/username/**")
+                        .permitAll()
                         // Require authentication for all other endpoints
                         .anyRequest().authenticated())
                 .httpBasic(basic -> basic.disable());

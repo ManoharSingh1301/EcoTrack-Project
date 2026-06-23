@@ -1,7 +1,7 @@
-package com.controller;
+package com.ecotrack.communication.controller;
 
-import com.model.ChatMessage;
-import com.service.ChatMessageService;
+import com.ecotrack.communication.model.ChatMessage;
+import com.ecotrack.communication.service.ChatMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +23,16 @@ public class ChatController {
     private final ChatMessageService chatMessageService;
 
     @MessageMapping("/chat.send")
-    public void sendMessage(@Payload ChatMessage chatMessage) {
+    public void sendMessage(@Payload ChatMessage chatMessage, java.security.Principal principal) {
+        if (principal != null && principal.getName() != null) {
+            Long authenticatedUserId = Long.parseLong(principal.getName());
+            if (!authenticatedUserId.equals(chatMessage.getSenderId())) {
+                log.warn("User {} attempted to spoof message as user {}. Overriding senderId.", 
+                         authenticatedUserId, chatMessage.getSenderId());
+                chatMessage.setSenderId(authenticatedUserId);
+            }
+        }
+
         log.info("WebSocket message received from user {} to user {}",
                 chatMessage.getSenderId(), chatMessage.getRecipientId());
 

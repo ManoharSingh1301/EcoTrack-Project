@@ -102,7 +102,6 @@ public class ItemService {
      * Circuit breaker protects against user-service failures.
      */
     @CircuitBreaker(name = "userService", fallbackMethod = "verifyOwnerFallback")
-    @Retry(name = "userService")
     public UserDto verifyOwnerExists(Long ownerId) {
         log.info("Verifying owner exists via user-service: {}", ownerId);
         return userServiceClient.getUserById(ownerId);

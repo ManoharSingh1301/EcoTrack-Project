@@ -2,6 +2,7 @@ package com.ecotrack.user.service;
 
 import com.ecotrack.user.dto.LoginRequest;
 import com.ecotrack.user.dto.LoginResponse;
+import com.ecotrack.user.dto.UserResponse;
 import com.ecotrack.user.exception.AuthenticationException;
 import com.ecotrack.user.exception.DuplicateResourceException;
 import com.ecotrack.user.exception.ResourceNotFoundException;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -26,33 +28,51 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    // ── Mapper ─────────────────────────────────────────────────────────────────
+    public UserResponse toResponse(User user) {
+        return UserResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .address(user.getAddress())
+                .phone(user.getPhone())
+                .bio(user.getBio())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
+    }
+
+    // ── Queries ────────────────────────────────────────────────────────────────
     @Transactional(readOnly = true)
-    public List<User> getAllUsers() {
+    public List<UserResponse> getAllUsers() {
         log.debug("Fetching all users");
-        return userRepository.findAll();
+        return userRepository.findAll().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Cacheable(value = "users", key = "#id")
     @Transactional(readOnly = true)
-    public Optional<User> getUserById(Long id) {
+    public Optional<UserResponse> getUserById(Long id) {
         log.debug("Fetching user by id: {}", id);
-        return userRepository.findById(id);
+        return userRepository.findById(id).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
-    public Optional<User> getUserByUsername(String username) {
+    public Optional<UserResponse> getUserByUsername(String username) {
         log.debug("Fetching user by username: {}", username);
-        return userRepository.findByUsername(username);
+        return userRepository.findByUsername(username).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
-    public Optional<User> getUserByEmail(String email) {
+    public Optional<UserResponse> getUserByEmail(String email) {
         log.debug("Fetching user by email: {}", email);
-        return userRepository.findByEmail(email);
+        return userRepository.findByEmail(email).map(this::toResponse);
     }
 
     @Transactional
-    public User createUser(User user) {
+    public UserResponse createUser(User user) {
         log.info("Creating new user with username: {}", user.getUsername());
 
         if (userRepository.existsByUsername(user.getUsername())) {
@@ -66,16 +86,22 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         User savedUser = userRepository.save(user);
         log.info("User created successfully with id: {}", savedUser.getId());
-        return savedUser;
+        return toResponse(savedUser);
     }
 
     @CacheEvict(value = "users", key = "#id")
     @Transactional
-    public User updateUser(Long id, User userDetails) {
+    public UserResponse updateUser(Long id, User userDetails) {
         log.info("Updating user with id: {}", id);
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
+
+        // Validate email uniqueness only if it has changed
+        if (!user.getEmail().equals(userDetails.getEmail()) &&
+                userRepository.existsByEmail(userDetails.getEmail())) {
+            throw new DuplicateResourceException("User", "email", userDetails.getEmail());
+        }
 
         user.setFullName(userDetails.getFullName());
         user.setEmail(userDetails.getEmail());
@@ -90,7 +116,7 @@ public class UserService {
 
         User updatedUser = userRepository.save(user);
         log.info("User updated successfully with id: {}", id);
-        return updatedUser;
+        return toResponse(updatedUser);
     }
 
     @CacheEvict(value = "users", key = "#id")

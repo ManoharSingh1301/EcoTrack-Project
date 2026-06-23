@@ -89,7 +89,7 @@ public class ItemController {
     @GetMapping("/{id}/image")
     public ResponseEntity<byte[]> getItemImage(@PathVariable Long id) {
         Item item = itemService.getItemById(id);
-        if (!item.hasImage()) {
+        if (!item.hasImage() || item.getImageType() == null) {
             return ResponseEntity.notFound().build();
         }
         HttpHeaders headers = new HttpHeaders();

@@ -26,6 +26,7 @@ public class ItemMapper {
                 .available(item.getAvailable())
                 .hasImage(item.hasImage())
                 .imageName(item.getImageName())
+                .imageType(item.getImageType())
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt())
                 .build();
@@ -38,5 +39,7 @@ public class ItemMapper {
         if (request.getAvailable() != null) {
             item.setAvailable(request.getAvailable());
         }
+        // ownerId is intentionally NOT updated here — ownership transfer is not supported.
+        // The ownerId field in ItemRequest is used only during creation (toEntity).
     }
 }

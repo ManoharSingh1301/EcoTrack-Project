@@ -22,6 +22,7 @@ public class ItemResponse implements Serializable {
     private Boolean available;
     private boolean hasImage;
     private String imageName;
+    private String imageType;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

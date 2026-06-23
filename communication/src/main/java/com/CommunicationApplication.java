@@ -1,14 +1,11 @@
 package com;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
-
-@SpringBootApplication
-@EnableDiscoveryClient
+/**
+ * @deprecated This class has been moved to com.ecotrack.communication.CommunicationApplication.
+ * This file is kept temporarily only to avoid git conflicts. DO NOT USE.
+ * The actual main class is: com.ecotrack.communication.CommunicationApplication
+ */
+@Deprecated
 public class CommunicationApplication {
-
-    public static void main(String[] args) {
-        SpringApplication.run(CommunicationApplication.class, args);
-    }
+    // Intentionally empty — the real application is in com.ecotrack.communication.CommunicationApplication
 }
