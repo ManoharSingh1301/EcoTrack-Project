@@ -1,6 +1,6 @@
 # 🌱 EcoTrack — Local Community Sharing Platform
 
-A production-grade microservices backend where neighbors can share and lend tools and items within a local community. Built with **Java 17**, **Spring Boot 3.2**, **Spring Cloud 2023.0**, **MySQL**, **Redis**, and **Netflix Eureka** — designed to run entirely on a local machine.
+A production-grade microservices backend where neighbors can share and lend tools and items within a local community. Built with **Java 17**, **Spring Boot 3.2**, **Spring Cloud 2023.0**, **MySQL**, **Redis**, **WebSocket/STOMP**, and **Netflix Eureka** — designed to run entirely on a local machine.
 
 ---
 
@@ -13,10 +13,11 @@ A production-grade microservices backend where neighbors can share and lend tool
 - ✅ **API Gateway** — Reactive Spring Cloud Gateway with CORS, load balancing, WebSocket support
 - ✅ **User Management** — Registration, login (BCrypt), profile CRUD, password re-hashing on update
 - ✅ **Item Management** — CRUD, image upload/serve, availability toggle, category filtering, name search, pagination
+- ✅ **Real-Time Chat** — WebSocket/STOMP messaging between users, item-context chat, persistent history (communication-service)
 - ✅ **Inter-Service Communication** — Feign client (item→user verification) with Resilience4j circuit breaker + retry + fallback
 - ✅ **Distributed Caching** — Redis-backed Spring Cache (available items, items by category, user by ID)
-- ✅ **AOP Observability** — Logging aspect (service/controller entry, exit, duration, exceptions); Performance aspect (`@TrackExecutionTime` with slow-method warning)
-- ✅ **Global Exception Handling** — Structured `ErrorResponse` JSON for all error types
+- ✅ **AOP Observability** — Logging aspect (service/controller entry, exit, duration, exceptions) across all 3 domain services; Performance aspect (`@TrackExecutionTime` in item-service)
+- ✅ **Global Exception Handling** — Structured `ErrorResponse` JSON for all error types across all services
 - ✅ **API Documentation** — Swagger UI via Springdoc OpenAPI on item-service and user-service
 - ✅ **Automated Tests** — Unit tests (Mockito), repository integration tests (H2/DataJpaTest), controller integration tests (MockMvc/WebMvcTest)
 
@@ -26,34 +27,34 @@ A production-grade microservices backend where neighbors can share and lend tool
 
 ```
 React Frontend (Port 5173)
-        │ All traffic via HTTP/REST
+        │ HTTP/REST + WebSocket (all traffic through gateway)
         ▼
-┌─────────────────────────────────────┐
-│        API Gateway  :8080           │
-│  Spring Cloud Gateway (WebFlux)     │
-│  • Reactive CorsWebFilter           │
-│  • Routes: /api/items/**  → lb://item-service  │
-│            /api/users/**  → lb://user-service  │
+┌─────────────────────────────────────────────────────┐
+│              API Gateway  :8080                     │
+│         Spring Cloud Gateway (WebFlux)              │
+│  • Reactive CorsWebFilter                           │
+│  • Routes: /api/items/**  → lb://item-service       │
+│            /api/users/**  → lb://user-service       │
 │            /api/chat/**   → lb://communication-service │
 │            /ws-chat/**    → lb://communication-service │
-│  • WebSocket support enabled        │
-│  • Dynamic discovery locator        │
-└────────────────┬────────────────────┘
-                 │ Eureka-resolved lb:// URIs
-    ┌────────────┼─────────────────┐
-    ▼            ▼                 ▼
-┌──────────┐  ┌──────────────┐  ┌──────────────────┐
-│Discovery │  │ Item Service │  │  User Service    │
-│  Server  │  │  :8088       │  │  :8089           │
-│  :8761   │  │              │  │                  │
-│          │  │ MySQL:db_items│  │ MySQL:db_users   │
-│Netflix   │  │ Redis:6379   │  │ Redis:6379       │
-│Eureka    │  │ Feign client │  │ BCrypt + Security│
-│(no self- │  │ Circuit breaker│ │ AOP logging      │
-│register) │  │ AOP logging  │  │ Swagger UI       │
-└──────────┘  └──────────────┘  └──────────────────┘
-                    │ Feign: GET /api/users/{id}
-                    └─────────────────────────────▶ User Service
+│  • WebSocket support enabled                        │
+│  • Dynamic discovery locator                        │
+└──────────────┬──────────────────────────────────────┘
+               │ Eureka-resolved lb:// URIs
+   ┌───────────┼──────────────┬────────────────────────┐
+   ▼           ▼              ▼                        ▼
+┌──────────┐ ┌─────────────┐ ┌──────────────────┐ ┌───────────────────────┐
+│Discovery │ │ Item Service│ │  User Service    │ │ Communication Service │
+│  Server  │ │  :8088      │ │  :8089           │ │  :8087                │
+│  :8761   │ │             │ │                  │ │                       │
+│          │ │MySQL:db_items│ │MySQL:db_users    │ │MySQL:db_communication │
+│Netflix   │ │Redis:6379   │ │Redis:6379        │ │                       │
+│Eureka    │ │Feign client │ │BCrypt + Security │ │WebSocket (STOMP)      │
+│(no self- │ │Circuit break│ │AOP logging       │ │Real-time chat         │
+│register) │ │AOP logging  │ │Swagger UI        │ │Chat history REST API  │
+└──────────┘ └─────────────┘ └──────────────────┘ │AOP logging            │
+                  │ Feign: GET /api/users/{id}      └───────────────────────┘
+                  └───────────────────────────────▶ User Service
 ```
 
 ---
@@ -74,12 +75,13 @@ React Frontend (Port 5173)
 | Spring Data JPA | 3.2.0 | ORM |
 | Spring Security | 3.2.0 | Password encoding, endpoint security |
 | Spring Data Redis | 3.2.0 | Distributed caching |
+| **Spring WebSocket (STOMP)** | **3.2.0** | **Real-time bidirectional messaging** |
 | Spring AOP | 3.2.0 | Cross-cutting concerns |
 | Spring Boot Actuator | 3.2.0 | Health/info endpoints |
 | Spring Boot Validation | 3.2.0 | Bean validation (JSR-380) |
 | MySQL Connector/J | (managed) | Production DB driver |
 | H2 | (test scope) | In-memory DB for tests |
-| Springdoc OpenAPI | 2.3.0 | Swagger UI |
+| Springdoc OpenAPI | 2.3.0 | Swagger UI (item-service & user-service) |
 | Lombok | 1.18.42 | Code generation |
 | Maven | 3.8+ | Build & dependency management |
 | JUnit 5 + Mockito | (managed) | Testing |
@@ -132,7 +134,7 @@ EXIT;
 
 #### Step 1.3 — Set Credentials
 
-Edit both service `application.properties` files if your MySQL password differs from `admin`:
+Edit all three service `application.properties` files if your MySQL password differs from `admin`:
 
 **`item-service/src/main/resources/application.properties`**
 ```properties
@@ -140,6 +142,11 @@ spring.datasource.password=admin   # ← change to your MySQL root password
 ```
 
 **`user-service/src/main/resources/application.properties`**
+```properties
+spring.datasource.password=admin   # ← change to your MySQL root password
+```
+
+**`communication/src/main/resources/application.properties`**
 ```properties
 spring.datasource.password=admin   # ← change to your MySQL root password
 ```
@@ -191,7 +198,11 @@ mvn spring-boot:run
 cd user-service
 mvn spring-boot:run
 
-# Terminal 5: Frontend
+# Terminal 5: Communication Service
+cd communication
+mvn spring-boot:run
+
+# Terminal 6: Frontend
 cd frontend
 npm install
 npm run dev
@@ -221,6 +232,8 @@ java -jar user-service/target/user-service-1.0.0.jar
 | Item Service Swagger | http://localhost:8088/swagger-ui.html | Interactive API docs |
 | User Service (direct) | http://localhost:8089 | Direct access (bypass gateway) |
 | User Service Swagger | http://localhost:8089/swagger-ui.html | Interactive API docs |
+| Communication Service | http://localhost:8087 | REST chat history endpoint |
+| WebSocket Endpoint | ws://localhost:8087/ws-chat?userId={id} | STOMP over WebSocket |
 | React Frontend | http://localhost:5173 | Vite dev server |
 
 ---
@@ -312,6 +325,71 @@ All errors return a consistent JSON body:
 
 ---
 
+### Communication Service `/api/chat` & WebSocket `/ws-chat`
+
+#### WebSocket (STOMP) — Real-Time Messaging
+
+**Connect:** `ws://localhost:8087/ws-chat?userId={yourUserId}`  
+SockJS fallback also available at the same path.
+
+**Send a message** (publish to STOMP destination):
+```
+Destination : /app/chat.send
+Payload     : { "senderId": 1, "recipientId": 2, "itemId": 5, "content": "Is this still available?" }
+```
+- `itemId` is optional — omit to send a general user-to-user message
+- Server overrides `senderId` with the authenticated `userId` from the handshake query param (anti-spoofing)
+
+**Receive messages** (subscribe to user-specific queue):
+```
+Subscribe: /user/queue/messages
+```
+Both sender and recipient receive the saved `ChatMessage` object (including `id` and `timestamp`) after each send.
+
+#### REST — Chat History
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/chat/history/{user1Id}/{user2Id}` | Full bidirectional history between two users (ASC by timestamp) |
+| `GET` | `/api/chat/history/{user1Id}/{user2Id}?itemId={id}` | History filtered to a specific shared item |
+
+**Chat Message JSON:**
+```json
+{
+  "id": 42,
+  "senderId": 1,
+  "recipientId": 2,
+  "itemId": 5,
+  "content": "Is this still available?",
+  "timestamp": "2026-06-29T01:00:00"
+}
+```
+
+> **Note:** The communication service has no Swagger UI. All endpoints are fully public (no authentication enforced).
+
+---
+
+## 🌐 Error Response Format
+
+All errors return a consistent JSON body:
+
+```json
+{
+  "status": 404,
+  "error": "Not Found",
+  "message": "Item not found with id: 99",
+  "path": "/api/items/99",
+  "timestamp": "2026-06-29T01:00:00",
+  "validationErrors": {
+    "name": "Item name is required"
+  }
+}
+```
+
+`validationErrors` is only present for `400 Validation Failed` responses.
+
+---
+
 ## 🔒 Security
 
 ### Current Implementation
@@ -321,9 +399,10 @@ All errors return a consistent JSON body:
 | Password hashing | BCrypt (`BCryptPasswordEncoder`) |
 | Password in API | `@JsonProperty(WRITE_ONLY)` — never returned |
 | CORS | Centralized at API Gateway via `CorsWebFilter` |
-| CSRF | Disabled in user-service |
-| Allowed CORS origin | `http://localhost:5173` only |
+| CSRF | Disabled in user-service and communication-service |
+| Allowed CORS origin | `http://localhost:5173` (gateway & chat controller) |
 | Inter-service endpoints | `/api/users/{id}` and `/api/users/username/**` permitted without auth |
+| WebSocket identity | `userId` query param on WS upgrade; no token validation — users can claim any ID |
 
 ### ⚠️ Known Security Gaps
 
@@ -337,12 +416,12 @@ All errors return a consistent JSON body:
 
 ## 🧩 AOP Cross-Cutting Concerns
 
-### LoggingAspect (item-service & user-service)
+### LoggingAspect (item-service, user-service & communication-service)
 
 ```
-@Around  → service layer     : logs method name, args, execution time, exceptions
-@Before  → controller layer  : logs incoming API request method name
-@AfterThrowing → service layer: logs exception class + message
+@Around       → service layer     : logs method name, args, execution time, exceptions
+@Before       → controller layer  : logs incoming API request method name
+@AfterThrowing → service layer    : logs exception class + message
 ```
 
 ### PerformanceAspect (item-service only)
@@ -404,6 +483,22 @@ CREATE TABLE users (
 
 > Schema is managed by Hibernate with `ddl-auto=update` — tables are created/altered automatically on startup.
 
+### `db_communication.chat_messages`
+
+```sql
+CREATE TABLE chat_messages (
+  id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+  sender_id    BIGINT NOT NULL,
+  recipient_id BIGINT NOT NULL,
+  item_id      BIGINT,
+  content      TEXT NOT NULL,
+  timestamp    DATETIME NOT NULL,
+  INDEX idx_chat_sender_recipient (sender_id, recipient_id),
+  INDEX idx_chat_item_id (item_id),
+  INDEX idx_chat_timestamp (timestamp)
+);
+```
+
 ---
 
 ## 🧪 Running Tests
@@ -433,6 +528,7 @@ mvn test -Dtest=UserControllerTest
 | user-service | `UserServiceTest` | 12 | Unit (Mockito) |
 | user-service | `UserControllerTest` | 6 | Integration (WebMvcTest + MockMvc) |
 | user-service | `UserRepositoryTest` | 5 | Integration (DataJpaTest + H2) |
+| communication-service | `CommunicationApplicationTests` | 1 | Smoke (context loads only) |
 
 ---
 
