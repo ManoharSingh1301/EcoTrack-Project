@@ -48,7 +48,7 @@
 **1. Start all services:**
 ```powershell
 # Use the automated script (recommended)
-cd C:\Users\2460672\workk
+cd c:\Users\Farhaat\OneDrive\Desktop\EcoTrack
 .\start-all-services.ps1
 ```
 
@@ -67,23 +67,23 @@ Open 5 separate PowerShell terminals:
 
 ```powershell
 # Terminal 1 - Discovery Server
-cd C:\Users\2460672\workk\discovery-server
+cd c:\Users\Farhaat\OneDrive\Desktop\EcoTrack\discovery-server
 mvn spring-boot:run
 
 # Terminal 2 - API Gateway (wait 30 sec after Terminal 1)
-cd C:\Users\2460672\workk\api-gateway
+cd c:\Users\Farhaat\OneDrive\Desktop\EcoTrack\api-gateway
 mvn spring-boot:run
 
 # Terminal 3 - Item Service (wait 20 sec after Terminal 2)
-cd C:\Users\2460672\workk\item-service
+cd c:\Users\Farhaat\OneDrive\Desktop\EcoTrack\item-service
 mvn spring-boot:run
 
 # Terminal 4 - User Service (wait 15 sec after Terminal 3)
-cd C:\Users\2460672\workk\user-service
+cd c:\Users\Farhaat\OneDrive\Desktop\EcoTrack\user-service
 mvn spring-boot:run
 
 # Terminal 5 - Frontend (can start anytime)
-cd C:\Users\2460672\workk\frontend
+cd c:\Users\Farhaat\OneDrive\Desktop\EcoTrack\frontend
 npm run dev
 ```
 

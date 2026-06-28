@@ -49,6 +49,12 @@ Start-Service -ServiceName "User Service" `
               -Command "mvn spring-boot:run" `
               -WaitSeconds 15
 
+# Start Communication Service - Wait 15 seconds
+Start-Service -ServiceName "Communication Service" `
+              -ServicePath "$ProjectRoot\communication" `
+              -Command "mvn spring-boot:run" `
+              -WaitSeconds 15
+
 # Start Frontend - No wait needed
 Start-Service -ServiceName "React Frontend" `
               -ServicePath "$ProjectRoot\frontend" `
@@ -62,6 +68,7 @@ Write-Host "📊 Service URLs:" -ForegroundColor Cyan
 Write-Host "  - Discovery Server (Eureka): http://localhost:8761" -ForegroundColor White
 Write-Host "  - API Gateway:                http://localhost:8080" -ForegroundColor White
 Write-Host "  - React Frontend:             http://localhost:5173" -ForegroundColor White
+Write-Host "  - Communication Service:      http://localhost:8087" -ForegroundColor White
 Write-Host ""
 Write-Host "⏳ Please wait for all services to fully start (about 2-3 minutes)" -ForegroundColor Yellow
 Write-Host "💡 Check the Eureka dashboard to verify all services are registered" -ForegroundColor Yellow

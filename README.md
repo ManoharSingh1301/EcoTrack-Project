@@ -1,70 +1,59 @@
-# 🌱 EcoTrack: Local Community Sharing Platform
+# 🌱 EcoTrack — Local Community Sharing Platform
 
-A modern, production-ready microservices platform where neighbors can share and lend tools/items within their local community. Built with Java Spring Boot microservices backend and a premium React frontend featuring dark mode, glassmorphism, and smooth animations.
+A production-grade microservices backend where neighbors can share and lend tools and items within a local community. Built with **Java 17**, **Spring Boot 3.2**, **Spring Cloud 2023.0**, **MySQL**, **Redis**, and **Netflix Eureka** — designed to run entirely on a local machine.
 
-## ✨ Key Features
+---
 
-- 🌓 **Day/Night Mode** - Smooth color morphing transitions (500ms)
-- 🧲 **Magnetic Buttons** - Interactive button effects that follow cursor movement
-- ✨ **Spotlight Background** - Dynamic radial gradient that tracks mouse position
-- 🔮 **Glassmorphism UI** - Frosted-glass sidebar with theme-adaptive transparency
-- 🎭 **Staggered Animations** - Framer Motion powered sequential entrance effects
-- 📱 **Fully Responsive** - Works seamlessly on desktop, tablet, and mobile
-- 🎨 **Premium Design** - Custom Tailwind CSS with professional animations
-- 🔒 **Secure Architecture** - Centralized CORS, service discovery, load balancing
+## ✨ What's Actually Built
+
+> This section reflects the **verified, deployed implementation** — not aspirational roadmap items.
+
+### Backend Capabilities
+- ✅ **Service Registry** — Netflix Eureka for automatic service discovery
+- ✅ **API Gateway** — Reactive Spring Cloud Gateway with CORS, load balancing, WebSocket support
+- ✅ **User Management** — Registration, login (BCrypt), profile CRUD, password re-hashing on update
+- ✅ **Item Management** — CRUD, image upload/serve, availability toggle, category filtering, name search, pagination
+- ✅ **Inter-Service Communication** — Feign client (item→user verification) with Resilience4j circuit breaker + retry + fallback
+- ✅ **Distributed Caching** — Redis-backed Spring Cache (available items, items by category, user by ID)
+- ✅ **AOP Observability** — Logging aspect (service/controller entry, exit, duration, exceptions); Performance aspect (`@TrackExecutionTime` with slow-method warning)
+- ✅ **Global Exception Handling** — Structured `ErrorResponse` JSON for all error types
+- ✅ **API Documentation** — Swagger UI via Springdoc OpenAPI on item-service and user-service
+- ✅ **Automated Tests** — Unit tests (Mockito), repository integration tests (H2/DataJpaTest), controller integration tests (MockMvc/WebMvcTest)
 
 ---
 
 ## 🏗️ System Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│           React Frontend (Port 5173)                │
-│  ┌───────────────────────────────────────────────┐  │
-│  │  UI Layer                                     │  │
-│  │  • ThemeContext (Dark/Light Mode)            │  │
-│  │  • SpotlightBackground (Mouse tracking)      │  │
-│  │  • GlassSidebar (Glassmorphism)              │  │
-│  │  • MagneticButton (Interactive effects)      │  │
-│  │  • Framer Motion (Staggered animations)      │  │
-│  │  • Lucide React Icons (200+ icons)           │  │
-│  └───────────────────────────────────────────────┘  │
-└──────────────────────┬──────────────────────────────┘
-                       │ Axios HTTP/REST
-                       │ (10s timeout, interceptors)
-                       ↓
-┌─────────────────────────────────────────────────────┐
-│        API Gateway (Port 8080)                      │
-│  ┌───────────────────────────────────────────────┐  │
-│  │  Gateway Layer                                │  │
-│  │  • CorsConfig (Centralized CORS)             │  │
-│  │  • Route Management (/api/items, /api/users) │  │
-│  │  • Load Balancing (Round-robin)              │  │
-│  │  • Service Discovery Integration             │  │
-│  └───────────────────────────────────────────────┘  │
-└──────────────────┬───────────────────────────────────┘
-                   │
-     ┌─────────────┼─────────────┐
-     ↓             ↓             ↓
-┌──────────┐  ┌──────────┐  ┌──────────┐
-│Discovery │  │   Item   │  │   User   │
-│  Server  │  │ Service  │  │ Service  │
-│          │  │          │  │          │
-│Port 8761 │  │ Dynamic  │  │ Dynamic  │
-│          │  │  Port    │  │  Port    │
-│          │  │          │  │          │
-│• Netflix │  │• CRUD    │  │• Auth    │
-│  Eureka  │  │• Search  │  │• Profile │
-│• Service │  │• Filter  │  │• Session │
-│  Registry│  │• Toggle  │  │  Mgmt    │
-└──────────┘  └─────┬────┘  └─────┬────┘
-                    │             │
-                    ↓             ↓
-              ┌──────────┐  ┌──────────┐
-              │ db_items │  │ db_users │
-              │  MySQL   │  │  MySQL   │
-              │  8.0+    │  │  8.0+    │
-              └──────────┘  └──────────┘
+React Frontend (Port 5173)
+        │ All traffic via HTTP/REST
+        ▼
+┌─────────────────────────────────────┐
+│        API Gateway  :8080           │
+│  Spring Cloud Gateway (WebFlux)     │
+│  • Reactive CorsWebFilter           │
+│  • Routes: /api/items/**  → lb://item-service  │
+│            /api/users/**  → lb://user-service  │
+│            /api/chat/**   → lb://communication-service │
+│            /ws-chat/**    → lb://communication-service │
+│  • WebSocket support enabled        │
+│  • Dynamic discovery locator        │
+└────────────────┬────────────────────┘
+                 │ Eureka-resolved lb:// URIs
+    ┌────────────┼─────────────────┐
+    ▼            ▼                 ▼
+┌──────────┐  ┌──────────────┐  ┌──────────────────┐
+│Discovery │  │ Item Service │  │  User Service    │
+│  Server  │  │  :8088       │  │  :8089           │
+│  :8761   │  │              │  │                  │
+│          │  │ MySQL:db_items│  │ MySQL:db_users   │
+│Netflix   │  │ Redis:6379   │  │ Redis:6379       │
+│Eureka    │  │ Feign client │  │ BCrypt + Security│
+│(no self- │  │ Circuit breaker│ │ AOP logging      │
+│register) │  │ AOP logging  │  │ Swagger UI       │
+└──────────┘  └──────────────┘  └──────────────────┘
+                    │ Feign: GET /api/users/{id}
+                    └─────────────────────────────▶ User Service
 ```
 
 ---
@@ -72,1538 +61,549 @@ A modern, production-ready microservices platform where neighbors can share and 
 ## 📋 Technology Stack
 
 ### Backend Microservices
+
 | Technology | Version | Purpose |
-|------------|---------|---------|
-| Java | 17+ | Runtime environment |
-| Spring Boot | 3.2.0 | Application framework |
-| Spring Cloud Gateway | 4.1.0 | API Gateway |
-| Netflix Eureka | 4.1.0 | Service discovery |
-| Spring Data JPA | 3.2.0 | Database ORM |
-| MySQL | 8.0+ | Relational database |
-| Maven | 3.8+ | Build tool |
-
-### Frontend Application
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| React | 18.2.0 | UI framework |
-| Vite | 5.0.8 | Build tool & dev server |
-| Tailwind CSS | 3.4.0 | Utility-first CSS with responsive design |
-| Framer Motion | 10.16.16 | Animation library |
-| Lucide React | 0.294.0 | Icon library |
-| Axios | 1.6.2 | HTTP client |
-| React Router | 6.21.0 | Client-side routing |
-
-### 📱 Responsive Design Breakpoints
-| Breakpoint | Size | Device Type | Layout Changes |
-|------------|------|-------------|----------------|
-| `xs` | 475px+ | Extra small phones | Single column, compact spacing |
-| `sm` | 640px+ | Small devices | 2-column grids, medium elements |
-| `md` | 768px+ | Tablets | Responsive navigation, optimized layouts |
-| `lg` | 1024px+ | Laptops | Glassmorphic sidebar visible, 3-column grids |
-| `xl` | 1280px+ | Desktops | Full-width layouts, maximum spacing |
-
-**Key Responsive Features:**
-- 📱 **Mobile-first approach** with progressive enhancement
-- 🍔 **Hamburger menu** for mobile navigation (< 768px)
-- 📐 **Flexible grids** that adapt from 1 → 2 → 3 columns
-- 🎯 **Touch-friendly buttons** with proper sizing on mobile
-- 🔍 **Adaptive search bars** with icon-only buttons on small screens
-- 🚪 **Sidebar auto-hide** on tablets and mobile (< 1024px)
-- 📏 **Fluid typography** scaling from 14px to 24px based on screen size
-- 🖼️ **Responsive cards** with flexible padding and margins
+|---|---|---|
+| Java | 17 | Runtime |
+| Spring Boot | 3.2.0 | Framework |
+| Spring Cloud Gateway | 2023.0.0 BOM | API gateway (reactive) |
+| Spring Cloud Eureka Server | 2023.0.0 BOM | Service registry |
+| Spring Cloud Eureka Client | 2023.0.0 BOM | Service registration |
+| Spring Cloud OpenFeign | 2023.0.0 BOM | Declarative HTTP client |
+| Spring Cloud Circuit Breaker (Resilience4j) | 2023.0.0 BOM | Fault tolerance |
+| Spring Data JPA | 3.2.0 | ORM |
+| Spring Security | 3.2.0 | Password encoding, endpoint security |
+| Spring Data Redis | 3.2.0 | Distributed caching |
+| Spring AOP | 3.2.0 | Cross-cutting concerns |
+| Spring Boot Actuator | 3.2.0 | Health/info endpoints |
+| Spring Boot Validation | 3.2.0 | Bean validation (JSR-380) |
+| MySQL Connector/J | (managed) | Production DB driver |
+| H2 | (test scope) | In-memory DB for tests |
+| Springdoc OpenAPI | 2.3.0 | Swagger UI |
+| Lombok | 1.18.42 | Code generation |
+| Maven | 3.8+ | Build & dependency management |
+| JUnit 5 + Mockito | (managed) | Testing |
+| AssertJ | (managed) | Fluent test assertions |
 
 ---
 
-## 🚀 Complete Setup Workflow
+## 🚀 Complete Setup Guide
 
 ### 📦 Prerequisites
 
-Before starting, ensure you have:
+| Tool | Version | Verify |
+|---|---|---|
+| JDK | 17+ | `java -version` |
+| Maven | 3.8+ | `mvn -version` |
+| MySQL | 8.0+ | `mysql --version` |
+| Redis | 7.0+ | `redis-cli ping` |
+| Node.js | 18+ | `node -v` |
 
-1. **Java Development Kit (JDK) 17+**
-   - Download: https://www.oracle.com/java/technologies/downloads/
-   - Verify: `java -version`
-
-2. **Apache Maven 3.8+**
-   - Download: https://maven.apache.org/download.cgi
-   - Verify: `mvn -version`
-
-3. **Node.js 18+ & npm**
-   - Download: https://nodejs.org/
-   - Verify: `node -v` and `npm -v`
-
-4. **MySQL Server 8.0+**
-   - Download: https://dev.mysql.com/downloads/
-   - Verify: `mysql --version`
-
-5. **Git** (optional, for cloning)
-   - Download: https://git-scm.com/
+> **Redis is required.** Both item-service and user-service connect to Redis on `localhost:6379`. Services will fail to start if Redis is unavailable.
 
 ---
 
-## 🗄️ Phase 1: Database Configuration
+### 🗄️ Phase 1: Database Setup
 
-### Step 1.1: Start MySQL Server
-```bash
-# Windows (PowerShell)
+#### Step 1.1 — Start MySQL
+
+```powershell
+# Windows PowerShell
 Start-Service MySQL80
-
-# Or start from MySQL Workbench / Services
 ```
 
-### Step 1.2: Create Databases
-```bash
-# Login to MySQL as root
-mysql -u root -p
-# Enter your MySQL root password
-```
+#### Step 1.2 — Create Databases
 
 ```sql
--- Create databases
-CREATE DATABASE IF NOT EXISTS db_items 
-  DEFAULT CHARACTER SET utf8mb4 
+-- Connect: mysql -u root -p
+CREATE DATABASE IF NOT EXISTS db_items
+  DEFAULT CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-CREATE DATABASE IF NOT EXISTS db_users 
-  DEFAULT CHARACTER SET utf8mb4 
+CREATE DATABASE IF NOT EXISTS db_users
+  DEFAULT CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
--- Verify creation
 SHOW DATABASES;
-
--- Exit MySQL
 EXIT;
 ```
 
-### Step 1.3: Configure Database Credentials
+> Both databases are also auto-created by JPA on first startup thanks to `createDatabaseIfNotExist=true` in the JDBC URL.
 
-**For Item Service:**
-Edit `item-service/src/main/resources/application.properties`:
+#### Step 1.3 — Set Credentials
+
+Edit both service `application.properties` files if your MySQL password differs from `admin`:
+
+**`item-service/src/main/resources/application.properties`**
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/db_items
-spring.datasource.username=root
-spring.datasource.password=admin
-# ↑ Change 'admin' to your MySQL root password
-
-spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
+spring.datasource.password=admin   # ← change to your MySQL root password
 ```
 
-**For User Service:**
-Edit `user-service/src/main/resources/application.properties`:
+**`user-service/src/main/resources/application.properties`**
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/db_users
-spring.datasource.username=root
-spring.datasource.password=admin
-# ↑ Change 'admin' to your MySQL root password
-
-spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
+spring.datasource.password=admin   # ← change to your MySQL root password
 ```
 
 ---
 
-## 🔧 Phase 2: Backend Services Startup
+### ⚡ Phase 2: Redis Setup
 
-> **⚠️ CRITICAL:** Services MUST be started in this exact order!
-
-### Step 2.1: Start Discovery Server (Port 8761) ⭐ FIRST
+Ensure Redis is running on the default port:
 
 ```bash
+# Linux/macOS
+redis-server
+
+# Windows (if Redis installed via Chocolatey or WSL)
+redis-cli ping
+# Expected: PONG
+```
+
+---
+
+### 🏃 Phase 3: Start Microservices
+
+#### Option A — Automated (Windows PowerShell)
+
+```powershell
+# Run from project root
+.\start-all-services.ps1
+```
+
+This script starts services in the correct order with delays: Discovery Server (30s wait) → API Gateway (20s wait) → Item Service (15s wait) → User Service (15s wait) → Communication Service (15s wait) → Frontend.
+
+#### Option B — Manual (each in a separate terminal)
+
+```bash
+# Terminal 1: Discovery Server (start first, wait ~30s)
 cd discovery-server
-mvn clean install
 mvn spring-boot:run
-```
 
-**Wait for console output:**
-```
-Started DiscoveryServerApplication in X.XXX seconds
-```
-
-**Verify in browser:** http://localhost:8761
-- You should see the **Eureka Dashboard**
-- "Instances currently registered with Eureka" should be **empty** initially
-
----
-
-### Step 2.2: Start API Gateway (Port 8080) ⭐ SECOND
-
-**Open a NEW terminal window:**
-```bash
+# Terminal 2: API Gateway (start after Eureka is up)
 cd api-gateway
-mvn clean install
 mvn spring-boot:run
-```
 
-**Wait for console output:**
-```
-Started ApiGatewayApplication in X.XXX seconds
-DiscoveryClient_API-GATEWAY - registration status: 204
-```
-
-**Verify:** Refresh http://localhost:8761
-- **API-GATEWAY** should now appear under "Instances currently registered with Eureka"
-- Status should be **UP** (green)
-
----
-
-### Step 2.3: Start Item Service (Dynamic Port)
-
-**Open a NEW terminal window:**
-```bash
+# Terminal 3: Item Service
 cd item-service
-mvn clean install
 mvn spring-boot:run
-```
 
-**Wait for console output:**
-```
-Started ItemServiceApplication in X.XXX seconds
-DiscoveryClient_ITEM-SERVICE - registration status: 204
-```
-
-**Verify Eureka Dashboard:**
-- **ITEM-SERVICE** should appear
-- Note its dynamically assigned port (e.g., `localhost:50123`)
-
----
-
-### Step 2.4: Start User Service (Dynamic Port)
-
-**Open a NEW terminal window:**
-```bash
+# Terminal 4: User Service
 cd user-service
-mvn clean install
 mvn spring-boot:run
-```
 
-**Wait for console output:**
-```
-Started UserServiceApplication in X.XXX seconds
-DiscoveryClient_USER-SERVICE - registration status: 204
-```
-
-**Final Verification - Eureka Dashboard:**
-```
-Instances currently registered with Eureka:
-┌──────────────┬────────────────────┬────────┐
-│ Application  │ Availability Zones │ Status │
-├──────────────┼────────────────────┼────────┤
-│ API-GATEWAY  │ defaultZone: 1     │ UP     │
-│ ITEM-SERVICE │ defaultZone: 1     │ UP     │
-│ USER-SERVICE │ defaultZone: 1     │ UP     │
-└──────────────┴────────────────────┴────────┘
-```
-
----
-
-## ✅ Phase 3: Backend API Verification
-
-### Test 3.1: Check Service Registration
-```bash
-# PowerShell
-Invoke-WebRequest -Uri "http://localhost:8761/eureka/apps" -UseBasicParsing
-```
-
-### Test 3.2: Test Gateway Routing
-```bash
-# Test Item Service through Gateway
-Invoke-RestMethod -Uri "http://localhost:8080/api/items" -Method GET
-
-# Test User Service through Gateway
-Invoke-RestMethod -Uri "http://localhost:8080/api/users" -Method GET
-```
-
-### Test 3.3: Verify CORS Configuration
-CORS is centralized in `api-gateway/src/main/java/com/ecotrack/gateway/config/CorsConfig.java`:
-- **Allowed Origin:** `http://localhost:5173`
-- **Allowed Methods:** GET, POST, PUT, DELETE, PATCH, OPTIONS
-- **Allowed Headers:** `*`
-- **Allow Credentials:** `true`
-- **Max Age:** 3600 seconds (1 hour)
-
----
-
-## 💻 Phase 4: Frontend Application Setup
-
-### Step 4.1: Install Node Dependencies
-```bash
+# Terminal 5: Frontend
 cd frontend
 npm install
-```
-
-**This installs 15 dependencies including:**
-- ✅ react & react-dom (UI framework)
-- ✅ react-router-dom (navigation)
-- ✅ axios (API client)
-- ✅ tailwindcss (styling)
-- ✅ lucide-react (icons)
-- ✅ framer-motion (animations)
-
-### Step 4.2: Verify API Configuration
-Check `frontend/src/api/api.js`:
-```javascript
-const API_BASE_URL = 'http://localhost:8080/api';
-// ↑ Must point to API Gateway
-```
-
-### Step 4.3: Start Development Server
-```bash
 npm run dev
 ```
 
-**Expected output:**
-```
-  VITE v5.0.8  ready in 324 ms
-
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose
-  ➜  press h to show help
-```
-
----
-
-## 🎨 Phase 5: Frontend Experience Tour
-
-### 5.1 Home Page (Unauthenticated)
-**Open:** http://localhost:5173
-
-**You will see:**
-1. **Animated Sparkles Icon** 
-   - Rotates and scales in a 3-second loop
-   - Color: Green (light mode) / Light green (dark mode)
-
-2. **Three Feature Cards** (Staggered Animation)
-   - **Card 1 (Green):** "Share Tools" - Wrench icon
-   - **Card 2 (Blue):** "Reduce Waste" - Globe icon
-   - **Card 3 (Purple):** "Build Community" - HandHeart icon
-   - Each card enters 0.15s after the previous with spring physics
-
-3. **Magnetic Buttons**
-   - Hover over "Get Started" or "Login"
-   - Button follows cursor with 30% movement
-   - Smooth return animation on mouse leave
-
-4. **Spotlight Effect**
-   - Move mouse around the page
-   - 96px green gradient follows cursor
-   - Subtle opacity (doesn't interfere with content)
-
-5. **Theme Toggle**
-   - Click **Moon icon** in navbar
-   - Watch 500ms smooth color transition
-   - All components adapt (glassmorphic effects change)
-
----
-
-### 5.2 User Registration Flow
-
-**Step 1:** Click **"Get Started"** button
-
-**Step 2:** Fill registration form:
-```
-Username:   testuser
-Email:      test@example.com
-Password:   password123
-Full Name:  Test User
-Address:    123 Test St, City, State
-Phone:      +1 (555) 123-4567
-```
-
-**Step 3:** Click **"Register"** button
-- Loading spinner appears with "Creating account..." text
-- Background glassmorphic card with icons
-
-**Backend Flow:**
-```
-Register.jsx → api.js (Axios POST)
-    ↓
-API Gateway (8080) → User Service (dynamic port)
-    ↓
-MySQL db_users (INSERT INTO users)
-    ↓
-Auto-login → Navigate to /items page
-```
-
----
-
-### 5.3 Explore Dashboard Features
-
-#### Glassmorphic Sidebar (Logged In Users)
-- **Fixed left position** (w-64, 256px)
-- **Frosted glass effect:** `backdrop-blur-xl`
-- **Theme adaptive:** 
-  - Light: `bg-white/70` (70% opacity white)
-  - Dark: `bg-gray-900/70` (70% opacity dark gray)
-- **Active route highlighting:** Gradient green when selected
-
-**Navigation Items:**
-1. 📦 **Browse Items** → `/items`
-2. 📋 **My Items** → `/my-items`
-3. 👤 **Profile** → `/profile`
-
----
-
-### 5.4 Items Page Features
-
-**Access:** Click "Browse Items" in sidebar
-
-**UI Components:**
-1. **Search Bar with Icon**
-   - Lucide Search icon on left
-   - Enter key triggers search
-   - Magnetic "Search" button
-
-2. **Filter Buttons**
-   - "All Items" - Shows everything
-   - "Available Only" - Shows available items
-   - Active filter has gradient background
-
-3. **Staggered Item Cards**
-   - Each card enters with 0.1s delay
-   - Glassmorphic background
-   - Hover effect: `-translate-y-1` (lifts up 4px)
-   - Availability badge (green/red)
-
-**Data Flow:**
-```
-Items.jsx (useEffect) → itemsApi.getAllItems()
-    ↓
-Axios GET http://localhost:8080/api/items
-    ↓
-API Gateway → Item Service
-    ↓
-MySQL db_items (SELECT * FROM items)
-    ↓
-Response → State update → Animated render
-```
-
----
-
-### 5.5 Create Your First Item
-
-**Step 1:** Navigate to **"My Items"** in sidebar
-
-**Step 2:** Click **"Add New Item"** button (magnetic effect)
-
-**Step 3:** Fill item form:
-```
-Name:        Power Drill
-Description: Makita 18V cordless drill with 2 batteries
-Category:    Tools
-Available:   ✓ (checked)
-```
-
-**Step 4:** Click **"Create Item"**
-
-**Backend Flow:**
-```
-MyItems.jsx → itemsApi.createItem(data)
-    ↓
-POST http://localhost:8080/api/items
-    ↓
-API Gateway → Item Service
-    ↓
-MySQL db_items (INSERT INTO items)
-    ↓
-Response → UI refresh with new item
-```
-
----
-
-## 🎭 Phase 6: Understanding UI Components
-
-### Component 1: ThemeContext
-**File:** `frontend/src/contexts/ThemeContext.jsx`
-
-**Purpose:** Global theme state management
-
-**Key Features:**
-- React Context API for state sharing
-- Persists theme in `localStorage`
-- Applies `light` or `dark` class to `<html>` element
-- CSS transitions handle smooth color changes
-
-**Usage:**
-```jsx
-import { useTheme } from '../contexts/ThemeContext';
-
-function MyComponent() {
-  const { theme, toggleTheme } = useTheme();
-  // theme is 'light' or 'dark'
-  // toggleTheme() switches between them
-}
-```
-
----
-
-### Component 2: SpotlightBackground
-**File:** `frontend/src/components/SpotlightBackground.jsx`
-
-**Purpose:** Mouse-following gradient effect
-
-**Technical Details:**
-- Listens to `window.mousemove` event
-- Tracks cursor X/Y coordinates in state
-- Renders 96px radial gradient div
-- Position: `fixed` with `pointer-events: none`
-- Z-index: 0 (behind all content)
-
-**Calculation:**
-```javascript
-left: mouseX - 192px  // Center on cursor (96px radius)
-top:  mouseY - 192px
-```
-
-**Theme Adaptation:**
-```css
-opacity: 0.2;           /* Light mode: 20% */
-dark:opacity-10;        /* Dark mode: 10% */
-```
-
----
-
-### Component 3: MagneticButton
-**File:** `frontend/src/components/MagneticButton.jsx`
-
-**Purpose:** Button that follows cursor
-
-**Algorithm:**
-```javascript
-1. onMouseMove:
-   - Get button bounding rect
-   - Calculate cursor offset from button center
-   - Apply 30% of offset as transform
-
-2. onMouseLeave:
-   - Reset transform to (0, 0)
-   - Smooth transition back to original position
-```
-
-**Usage:**
-```jsx
-<MagneticButton 
-  onClick={handleClick}
-  className="bg-green-600 text-white px-6 py-3 rounded-lg"
->
-  Click Me
-</MagneticButton>
-```
-
----
-
-### Component 4: GlassSidebar
-**File:** `frontend/src/components/GlassSidebar.jsx`
-
-**Purpose:** Glassmorphic navigation sidebar
-
-**CSS Breakdown:**
-```css
-backdrop-blur-xl          /* 24px blur radius */
-bg-white/70               /* 70% opacity white */
-dark:bg-gray-900/70       /* 70% opacity dark gray */
-border border-white/20    /* Subtle white border */
-shadow-2xl                /* Large shadow */
-```
-
-**Glassmorphism Formula:**
-1. Semi-transparent background
-2. Backdrop blur filter
-3. Subtle border
-4. Shadow for depth
-
-**Conditional Rendering:**
-```jsx
-if (!user) return null;  // Only show when logged in
-```
-
----
-
-## 🔄 Phase 7: Complete Data Flow Examples
-
-### Example 1: User Login Flow
-
-```
-┌──────────────────────────────────────────────────────┐
-│ 1. USER ACTION                                       │
-│    Login.jsx - User fills form and clicks "Login"   │
-└────────────────────┬─────────────────────────────────┘
-                     │ handleSubmit(e)
-                     ↓
-┌──────────────────────────────────────────────────────┐
-│ 2. API CALL                                          │
-│    api.js - usersApi.login(formData)                 │
-│    ├─ POST http://localhost:8080/api/users/login    │
-│    ├─ Headers: Content-Type: application/json       │
-│    └─ Body: { username, password }                  │
-└────────────────────┬─────────────────────────────────┘
-                     │ Axios request
-                     ↓
-┌──────────────────────────────────────────────────────┐
-│ 3. API GATEWAY                                       │
-│    Spring Cloud Gateway (Port 8080)                  │
-│    ├─ CorsConfig: Allows localhost:5173             │
-│    ├─ Route: /api/users/** → USER-SERVICE           │
-│    └─ Service Discovery: Finds USER-SERVICE via     │
-│       Eureka (dynamic port)                          │
-└────────────────────┬─────────────────────────────────┘
-                     │ Forwarded request
-                     ↓
-┌──────────────────────────────────────────────────────┐
-│ 4. USER SERVICE                                      │
-│    UserController.login(@RequestBody LoginRequest)  │
-│    └─ UserService.authenticateUser(username, pwd)   │
-└────────────────────┬─────────────────────────────────┘
-                     │ JPA query
-                     ↓
-┌──────────────────────────────────────────────────────┐
-│ 5. DATABASE                                          │
-│    MySQL db_users                                    │
-│    Query: SELECT * FROM users                        │
-│           WHERE username = ? AND password = ?        │
-└────────────────────┬─────────────────────────────────┘
-                     │ User entity returned
-                     ↓
-┌──────────────────────────────────────────────────────┐
-│ 6. RESPONSE CHAIN                                    │
-│    User Service → API Gateway → Frontend             │
-│    Status: 200 OK                                    │
-│    Body: { id, username, email, fullName, ... }     │
-└────────────────────┬─────────────────────────────────┘
-                     │ response.data
-                     ↓
-┌──────────────────────────────────────────────────────┐
-│ 7. FRONTEND UPDATE                                   │
-│    Login.jsx                                         │
-│    ├─ onLogin(response.data)                         │
-│    ├─ localStorage.setItem('user', JSON.stringify()) │
-│    └─ navigate('/items')                             │
-└──────────────────────────────────────────────────────┘
-```
-
----
-
-### Example 2: Item Search with Filter
-
-```
-┌──────────────────────────────────────────────────────┐
-│ 1. USER INTERACTION                                  │
-│    Items.jsx - User types "drill" and clicks Search │
-└────────────────────┬─────────────────────────────────┘
-                     │ handleSearch()
-                     ↓
-┌──────────────────────────────────────────────────────┐
-│ 2. API CALL                                          │
-│    itemsApi.searchItems("drill")                     │
-│    GET http://localhost:8080/api/items/search?name=drill
-└────────────────────┬─────────────────────────────────┘
-                     │
-                     ↓
-┌──────────────────────────────────────────────────────┐
-│ 3. API GATEWAY                                       │
-│    Routes /api/items/** to ITEM-SERVICE              │
-└────────────────────┬─────────────────────────────────┘
-                     │
-                     ↓
-┌──────────────────────────────────────────────────────┐
-│ 4. ITEM SERVICE                                      │
-│    ItemController.searchItems(@RequestParam name)    │
-│    └─ ItemRepository.findByNameContaining("drill")   │
-└────────────────────┬─────────────────────────────────┘
-                     │
-                     ↓
-┌──────────────────────────────────────────────────────┐
-│ 5. DATABASE QUERY                                    │
-│    SELECT * FROM items                               │
-│    WHERE name LIKE '%drill%'                         │
-│    Result: [                                         │
-│      { id: 1, name: "Power Drill", ... },           │
-│      { id: 5, name: "Drill Bit Set", ... }          │
-│    ]                                                 │
-└────────────────────┬─────────────────────────────────┘
-                     │ List<Item>
-                     ↓
-┌──────────────────────────────────────────────────────┐
-│ 6. FRONTEND STATE UPDATE                             │
-│    Items.jsx                                         │
-│    ├─ setItems(response.data)                        │
-│    └─ Triggers re-render                             │
-└────────────────────┬─────────────────────────────────┘
-                     │
-                     ↓
-┌──────────────────────────────────────────────────────┐
-│ 7. ANIMATED UI RENDER                                │
-│    Framer Motion Staggered Animation:                │
-│    ├─ Card 1: Fade in + slide up (delay: 0ms)       │
-│    ├─ Card 2: Fade in + slide up (delay: 100ms)     │
-│    └─ Each card: Glassmorphic, hover effect         │
-└──────────────────────────────────────────────────────┘
-```
-
----
-
-## 🏭 Phase 8: Production Build & Deployment
-
-### Step 8.1: Build Backend Services as JARs
+#### Option C — Pre-built JARs
 
 ```bash
-# Navigate to each service and build
-cd discovery-server
-mvn clean package -DskipTests
-# Output: target/discovery-server-0.0.1-SNAPSHOT.jar
+# Build each service
+cd item-service && mvn clean package -DskipTests
+cd user-service && mvn clean package -DskipTests
 
-cd ../api-gateway
-mvn clean package -DskipTests
-# Output: target/api-gateway-0.0.1-SNAPSHOT.jar
-
-cd ../item-service
-mvn clean package -DskipTests
-# Output: target/item-service-0.0.1-SNAPSHOT.jar
-
-cd ../user-service
-mvn clean package -DskipTests
-# Output: target/user-service-0.0.1-SNAPSHOT.jar
-```
-
-### Step 8.2: Build Frontend Production Bundle
-
-```bash
-cd frontend
-npm run build
-```
-
-**Output:** `frontend/dist/` folder containing:
-- `index.html` - Entry point
-- `assets/` - Optimized JS/CSS bundles
-- All assets are minified and tree-shaken
-
-**Bundle Size:**
-- React + dependencies: ~150KB (gzipped)
-- Custom code: ~50KB (gzipped)
-- Total: ~200KB (very efficient!)
-
-### Step 8.3: Run Production Services
-
-**Terminal 1 - Discovery Server:**
-```bash
-java -jar discovery-server/target/discovery-server-0.0.1-SNAPSHOT.jar
-```
-
-**Terminal 2 - API Gateway:**
-```bash
-java -jar api-gateway/target/api-gateway-0.0.1-SNAPSHOT.jar
-```
-
-**Terminal 3 - Item Service:**
-```bash
-java -jar item-service/target/item-service-0.0.1-SNAPSHOT.jar
-```
-
-**Terminal 4 - User Service:**
-```bash
-java -jar user-service/target/user-service-0.0.1-SNAPSHOT.jar
-```
-
-**Terminal 5 - Frontend Static Server:**
-```bash
-# Install serve globally (one-time)
-npm install -g serve
-
-# Serve production build
-cd frontend
-serve -s dist -p 5173
+# Run
+java -jar item-service/target/item-service-1.0.0.jar
+java -jar user-service/target/user-service-1.0.0.jar
 ```
 
 ---
 
-## 📁 Project Structure Deep Dive
+### 🌐 Service URLs
 
-```
-C:\Users\2460672\workk\
-│
-├── discovery-server/                   # Netflix Eureka Server
-│   ├── src/
-│   │   └── main/
-│   │       ├── java/com/ecotrack/discovery/
-│   │       │   └── DiscoveryServerApplication.java  # @EnableEurekaServer
-│   │       └── resources/
-│   │           └── application.properties           # Port 8761 config
-│   ├── pom.xml                                     # Spring Cloud Netflix
-│   └── target/
-│       └── discovery-server-0.0.1-SNAPSHOT.jar
-│
-├── api-gateway/                        # Spring Cloud Gateway
-│   ├── src/
-│   │   └── main/
-│   │       ├── java/com/ecotrack/gateway/
-│   │       │   ├── ApiGatewayApplication.java      # @EnableDiscoveryClient
-│   │       │   └── config/
-│   │       │       └── CorsConfig.java             # Centralized CORS
-│   │       └── resources/
-│   │           └── application.properties           # Routes, port 8080
-│   ├── pom.xml
-│   └── target/
-│       └── api-gateway-0.0.1-SNAPSHOT.jar
-│
-├── item-service/                       # Item Management Microservice
-│   ├── src/
-│   │   └── main/
-│   │       ├── java/com/ecotrack/item/
-│   │       │   ├── ItemServiceApplication.java
-│   │       │   ├── controller/
-│   │       │   │   └── ItemController.java         # REST endpoints
-│   │       │   ├── model/
-│   │       │   │   └── Item.java                   # JPA Entity
-│   │       │   ├── repository/
-│   │       │   │   └── ItemRepository.java         # JpaRepository
-│   │       │   └── service/
-│   │       │       └── ItemService.java            # Business logic
-│   │       └── resources/
-│   │           └── application.properties           # MySQL db_items
-│   ├── pom.xml
-│   └── target/
-│       └── item-service-0.0.1-SNAPSHOT.jar
-│
-├── user-service/                       # User Management Microservice
-│   ├── src/
-│   │   └── main/
-│   │       ├── java/com/ecotrack/user/
-│   │       │   ├── UserServiceApplication.java
-│   │       │   ├── controller/
-│   │       │   │   └── UserController.java         # Auth endpoints
-│   │       │   ├── dto/
-│   │       │   │   └── LoginRequest.java           # Request DTOs
-│   │       │   ├── model/
-│   │       │   │   └── User.java                   # JPA Entity
-│   │       │   ├── repository/
-│   │       │   │   └── UserRepository.java
-│   │       │   └── service/
-│   │       │       └── UserService.java
-│   │       └── resources/
-│   │           └── application.properties           # MySQL db_users
-│   ├── pom.xml
-│   └── target/
-│       └── user-service-0.0.1-SNAPSHOT.jar
-│
-├── frontend/                           # React SPA
-│   ├── public/                         # Static assets
-│   ├── src/
-│   │   ├── api/
-│   │   │   └── api.js                              # Axios config & endpoints
-│   │   ├── components/
-│   │   │   ├── GlassSidebar.jsx                    # Glassmorphic nav
-│   │   │   ├── MagneticButton.jsx                  # Interactive button
-│   │   │   ├── Navbar.jsx                          # Top navigation
-│   │   │   ├── ServiceStatus.jsx                   # Health monitor
-│   │   │   └── SpotlightBackground.jsx             # Mouse effect
-│   │   ├── contexts/
-│   │   │   └── ThemeContext.jsx                    # Dark mode state
-│   │   ├── pages/
-│   │   │   ├── Home.jsx                            # Landing page
-│   │   │   ├── Items.jsx                           # Browse items
-│   │   │   ├── Login.jsx                           # Login form
-│   │   │   ├── MyItems.jsx                         # User's items
-│   │   │   ├── Profile.jsx                         # User profile
-│   │   │   └── Register.jsx                        # Registration form
-│   │   ├── App.jsx                                 # Main app component
-│   │   ├── index.css                               # Global styles + animations
-│   │   └── main.jsx                                # React root
-│   ├── index.html                      # HTML entry point
-│   ├── package.json                    # Dependencies
-│   ├── tailwind.config.js              # Tailwind + dark mode
-│   ├── vite.config.js                  # Vite configuration
-│   └── dist/                           # Production build output
-│       ├── index.html
-│       └── assets/
-│           ├── index-[hash].js         # Minified JS bundle
-│           └── index-[hash].css        # Minified CSS
-│
-├── database/
-│   ├── setup.sql                       # Database creation script
-│   └── README.md                       # Database documentation
-│
-└── README.md                           # This file!
-```
+| Service | URL | Notes |
+|---|---|---|
+| Eureka Dashboard | http://localhost:8761 | View registered services |
+| API Gateway | http://localhost:8080 | All frontend traffic goes here |
+| Item Service (direct) | http://localhost:8088 | Direct access (bypass gateway) |
+| Item Service Swagger | http://localhost:8088/swagger-ui.html | Interactive API docs |
+| User Service (direct) | http://localhost:8089 | Direct access (bypass gateway) |
+| User Service Swagger | http://localhost:8089/swagger-ui.html | Interactive API docs |
+| React Frontend | http://localhost:5173 | Vite dev server |
 
 ---
 
-## 🔌 Complete API Documentation
+## 📡 REST API Reference
 
-### User Service Endpoints (via Gateway)
+### User Service `/api/users`
 
-**Base URL:** `http://localhost:8080/api/users`
+| Method | Path | Public | Request Body | Response |
+|---|---|---|---|---|
+| `POST` | `/register` | ✅ | `User` JSON (username, email, password, fullName, address?, phone?, bio?) | `201 UserResponse` |
+| `POST` | `/login` | ✅ | `{username, password}` | `200 LoginResponse` (userId, username, email, fullName, message) |
+| `GET` | `/` | 🔐 | — | `200 List<UserResponse>` |
+| `GET` | `/{id}` | ✅* | — | `200 UserResponse` |
+| `GET` | `/username/{username}` | ✅* | — | `200 UserResponse` |
+| `PUT` | `/{id}` | 🔐 | `User` JSON | `200 UserResponse` |
+| `DELETE` | `/{id}` | 🔐 | — | `204 No Content` |
 
-#### POST `/register` - Register New User
-```bash
-# Request
-POST http://localhost:8080/api/users/register
-Content-Type: application/json
+> ✅* = public to allow inter-service Feign calls from item-service. 🔐 = requires authentication (note: no token mechanism is currently implemented — see security notes).
 
+**Login Note:** Login does not issue a JWT or session token. The response is informational only.
+
+**Validation Rules:**
+- `username`: 3–50 characters, unique
+- `email`: valid email format, unique
+- `password`: minimum 8 characters (stored as BCrypt hash, never returned)
+- `fullName`: required
+- `phone`: optional, regex `^$|^[+]?[0-9]{10,15}$`
+- `bio`: max 500 characters
+
+---
+
+### Item Service `/api/items`
+
+| Method | Path | Request | Response |
+|---|---|---|---|
+| `GET` | `/` | — | `200 List<ItemResponse>` |
+| `GET` | `/{id}` | — | `200 ItemResponse` |
+| `GET` | `/owner/{ownerId}` | — | `200 List<ItemResponse>` |
+| `GET` | `/available` | — | `200 List<ItemResponse>` *(cached)* |
+| `GET` | `/available/page` | `?page=0&size=10&sortBy=createdAt&direction=desc` | `200 Page<ItemResponse>` |
+| `GET` | `/category/{category}` | — | `200 List<ItemResponse>` *(cached)* |
+| `GET` | `/search?name=` | query param | `200 List<ItemResponse>` |
+| `GET` | `/{id}/image` | — | `200 byte[]` with correct Content-Type |
+| `POST` | `/` | `multipart/form-data`: `item` (JSON) + optional `image` | `201 ItemResponse` |
+| `PUT` | `/{id}` | `multipart/form-data`: `item` (JSON) + optional `image` | `200 ItemResponse` |
+| `PATCH` | `/{id}/toggle-availability` | — | `200 ItemResponse` |
+| `DELETE` | `/{id}` | — | `204 No Content` |
+
+**Item JSON fields (in `item` part of multipart):**
+```json
 {
-  "username": "john_doe",
-  "email": "john@example.com",
-  "password": "securepass123",
-  "fullName": "John Doe",
-  "address": "123 Main St, Springfield",
-  "phone": "+1-555-0123"
-}
-
-# Response (201 Created)
-{
-  "id": 1,
-  "username": "john_doe",
-  "email": "john@example.com",
-  "fullName": "John Doe",
-  "address": "123 Main St, Springfield",
-  "phone": "+1-555-0123"
-}
-```
-
-#### POST `/login` - User Login
-```bash
-# Request
-POST http://localhost:8080/api/users/login
-Content-Type: application/json
-
-{
-  "username": "john_doe",
-  "password": "securepass123"
-}
-
-# Response (200 OK)
-{
-  "id": 1,
-  "username": "john_doe",
-  "email": "john@example.com",
-  "fullName": "John Doe",
-  "address": "123 Main St, Springfield",
-  "phone": "+1-555-0123"
-}
-
-# Error Response (401 Unauthorized)
-{
-  "error": "Invalid credentials"
-}
-```
-
-#### GET `/` - Get All Users
-```bash
-GET http://localhost:8080/api/users
-
-# Response (200 OK)
-[
-  {
-    "id": 1,
-    "username": "john_doe",
-    "email": "john@example.com",
-    "fullName": "John Doe"
-  },
-  {
-    "id": 2,
-    "username": "jane_smith",
-    "email": "jane@example.com",
-    "fullName": "Jane Smith"
-  }
-]
-```
-
-#### GET `/{id}` - Get User by ID
-```bash
-GET http://localhost:8080/api/users/1
-
-# Response (200 OK)
-{
-  "id": 1,
-  "username": "john_doe",
-  "email": "john@example.com",
-  "fullName": "John Doe",
-  "address": "123 Main St, Springfield",
-  "phone": "+1-555-0123"
-}
-```
-
-#### PUT `/{id}` - Update User
-```bash
-PUT http://localhost:8080/api/users/1
-Content-Type: application/json
-
-{
-  "fullName": "John Updated Doe",
-  "address": "456 New St, Springfield",
-  "phone": "+1-555-9999"
-}
-
-# Response (200 OK) - Updated user object
-```
-
-#### DELETE `/{id}` - Delete User
-```bash
-DELETE http://localhost:8080/api/users/1
-
-# Response (204 No Content)
-```
-
----
-
-### Item Service Endpoints (via Gateway)
-
-**Base URL:** `http://localhost:8080/api/items`
-
-#### POST `/` - Create New Item
-```bash
-POST http://localhost:8080/api/items
-Content-Type: application/json
-
-{
-  "name": "Makita Power Drill",
-  "description": "18V cordless drill with 2 batteries and charger",
-  "category": "Tools",
+  "name": "Power Drill",
+  "description": "Cordless 18V drill",
   "ownerId": 1,
-  "available": true
-}
-
-# Response (201 Created)
-{
-  "id": 1,
-  "name": "Makita Power Drill",
-  "description": "18V cordless drill with 2 batteries and charger",
-  "category": "Tools",
-  "ownerId": 1,
-  "available": true
-}
-```
-
-#### GET `/` - Get All Items
-```bash
-GET http://localhost:8080/api/items
-
-# Response (200 OK)
-[
-  {
-    "id": 1,
-    "name": "Makita Power Drill",
-    "description": "18V cordless drill",
-    "category": "Tools",
-    "ownerId": 1,
-    "available": true
-  },
-  {
-    "id": 2,
-    "name": "Lawn Mower",
-    "description": "Gas-powered lawn mower",
-    "category": "Garden",
-    "ownerId": 2,
-    "available": false
-  }
-]
-```
-
-#### GET `/{id}` - Get Item by ID
-```bash
-GET http://localhost:8080/api/items/1
-
-# Response (200 OK)
-{
-  "id": 1,
-  "name": "Makita Power Drill",
-  "description": "18V cordless drill with 2 batteries and charger",
-  "category": "Tools",
-  "ownerId": 1,
-  "available": true
-}
-```
-
-#### GET `/available` - Get Only Available Items
-```bash
-GET http://localhost:8080/api/items/available
-
-# Response (200 OK) - Only items where available=true
-[
-  {
-    "id": 1,
-    "name": "Makita Power Drill",
-    "available": true
-  }
-]
-```
-
-#### GET `/owner/{ownerId}` - Get Items by Owner
-```bash
-GET http://localhost:8080/api/items/owner/1
-
-# Response (200 OK) - All items belonging to user ID 1
-```
-
-#### GET `/category/{category}` - Get Items by Category
-```bash
-GET http://localhost:8080/api/items/category/Tools
-
-# Response (200 OK) - All items in "Tools" category
-```
-
-#### GET `/search?name={query}` - Search Items by Name
-```bash
-GET http://localhost:8080/api/items/search?name=drill
-
-# Response (200 OK)
-[
-  {
-    "id": 1,
-    "name": "Makita Power Drill",
-    "description": "18V cordless drill",
-    "category": "Tools",
-    "available": true
-  },
-  {
-    "id": 5,
-    "name": "Drill Bit Set",
-    "description": "50-piece titanium drill bits",
-    "category": "Tools",
-    "available": true
-  }
-]
-```
-
-#### PUT `/{id}` - Update Item
-```bash
-PUT http://localhost:8080/api/items/1
-Content-Type: application/json
-
-{
-  "name": "Makita Power Drill XPH12",
-  "description": "Updated model with brushless motor",
   "category": "Tools",
   "available": true
 }
-
-# Response (200 OK) - Updated item object
 ```
 
-#### PATCH `/{id}/toggle-availability` - Toggle Item Availability
-```bash
-PATCH http://localhost:8080/api/items/1/toggle-availability
+**Image upload:** Max 5 MB. Supported types: any valid MIME type (e.g., `image/jpeg`, `image/png`). Stored as `LONGBLOB` in MySQL. Served via `GET /api/items/{id}/image`.
 
-# If item was available=true, becomes available=false
-# If item was available=false, becomes available=true
+**Validation Rules:**
+- `name`: 2–100 characters, required
+- `description`: max 1000 characters, optional
+- `ownerId`: required (verified via Feign call to user-service on creation)
+- `category`: required
 
-# Response (200 OK)
+---
+
+### Error Response Format
+
+All errors return a consistent JSON body:
+
+```json
 {
-  "id": 1,
-  "name": "Makita Power Drill",
-  "available": false  # Toggled
+  "status": 404,
+  "error": "Not Found",
+  "message": "Item not found with id: 99",
+  "path": "/api/items/99",
+  "timestamp": "2026-06-29T01:00:00",
+  "validationErrors": {
+    "name": "Item name is required"
+  }
 }
 ```
 
-#### DELETE `/{id}` - Delete Item
+`validationErrors` is only present for `400 Validation Failed` responses.
+
+---
+
+## 🔒 Security
+
+### Current Implementation
+
+| Aspect | Implementation |
+|---|---|
+| Password hashing | BCrypt (`BCryptPasswordEncoder`) |
+| Password in API | `@JsonProperty(WRITE_ONLY)` — never returned |
+| CORS | Centralized at API Gateway via `CorsWebFilter` |
+| CSRF | Disabled in user-service |
+| Allowed CORS origin | `http://localhost:5173` only |
+| Inter-service endpoints | `/api/users/{id}` and `/api/users/username/**` permitted without auth |
+
+### ⚠️ Known Security Gaps
+
+1. **No token issuance:** Login returns user info but no JWT or session token. Protected endpoints (requiring authentication) are effectively unreachable from standard clients without implementing an auth mechanism.
+2. **Hardcoded DB credentials:** `username=root`, `password=admin` in plain `application.properties`. Must be externalized for any non-local deployment.
+3. **No gateway-level authentication:** The API Gateway performs no JWT validation — all routing is pass-through.
+4. **No rate limiting:** No rate limiting at gateway or service level.
+5. **Image MIME type not validated:** Upload accepts any claimed content type; no server-side validation of actual file content.
+
+---
+
+## 🧩 AOP Cross-Cutting Concerns
+
+### LoggingAspect (item-service & user-service)
+
+```
+@Around  → service layer     : logs method name, args, execution time, exceptions
+@Before  → controller layer  : logs incoming API request method name
+@AfterThrowing → service layer: logs exception class + message
+```
+
+### PerformanceAspect (item-service only)
+
+Applied to methods annotated with `@TrackExecutionTime`:
+- Logs execution duration in ms
+- Emits a `WARN` log if duration exceeds **1000ms**
+
+Usage:
+```java
+@TrackExecutionTime
+public ItemResponse someExpensiveMethod() { ... }
+```
+
+---
+
+## 💾 Database Schema
+
+### `db_items.items`
+
+```sql
+CREATE TABLE items (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name        VARCHAR(100) NOT NULL,
+  description VARCHAR(1000),
+  owner_id    BIGINT NOT NULL,
+  category    VARCHAR(255) NOT NULL,
+  available   TINYINT(1) NOT NULL DEFAULT 1,
+  image_data  LONGBLOB,
+  image_type  VARCHAR(255),
+  image_name  VARCHAR(255),
+  created_at  DATETIME NOT NULL,
+  updated_at  DATETIME,
+  INDEX idx_items_owner_id (owner_id),
+  INDEX idx_items_category (category),
+  INDEX idx_items_available (available),
+  INDEX idx_items_name (name)
+);
+```
+
+### `db_users.users`
+
+```sql
+CREATE TABLE users (
+  id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+  username   VARCHAR(50)  NOT NULL,
+  email      VARCHAR(255) NOT NULL,
+  password   VARCHAR(255) NOT NULL,
+  full_name  VARCHAR(255) NOT NULL,
+  address    VARCHAR(255),
+  phone      VARCHAR(255),
+  bio        VARCHAR(500),
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME,
+  UNIQUE INDEX idx_users_username (username),
+  UNIQUE INDEX idx_users_email (email)
+);
+```
+
+> Schema is managed by Hibernate with `ddl-auto=update` — tables are created/altered automatically on startup.
+
+---
+
+## 🧪 Running Tests
+
 ```bash
-DELETE http://localhost:8080/api/items/1
+# Item Service — all tests
+cd item-service
+mvn test
 
-# Response (204 No Content)
+# User Service — all tests
+cd user-service
+mvn test
+
+# Run a specific test class
+mvn test -Dtest=ItemServiceTest
+mvn test -Dtest=UserControllerTest
+```
+
+**Test isolation:** All tests use H2 in-memory database, with Eureka, Redis, and Feign circuit breakers disabled via `src/test/resources/application.properties` and `@ActiveProfiles("test")`.
+
+### Test Coverage Summary
+
+| Service | Test File | Tests | Type |
+|---|---|---|---|
+| item-service | `ItemServiceTest` | 9 | Unit (Mockito) |
+| item-service | `ItemRepositoryTest` | 8 | Integration (DataJpaTest + H2) |
+| user-service | `UserServiceTest` | 12 | Unit (Mockito) |
+| user-service | `UserControllerTest` | 6 | Integration (WebMvcTest + MockMvc) |
+| user-service | `UserRepositoryTest` | 5 | Integration (DataJpaTest + H2) |
+
+---
+
+## 🔧 Configuration Reference
+
+### Item Service (`item-service/application.properties`)
+
+```properties
+server.port=8088
+spring.application.name=item-service
+
+# MySQL
+spring.datasource.url=jdbc:mysql://localhost:3306/db_items?createDatabaseIfNotExist=true
+spring.datasource.username=root
+spring.datasource.password=admin
+
+# JPA
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+# File upload limits
+spring.servlet.multipart.max-file-size=5MB
+spring.servlet.multipart.max-request-size=5MB
+
+# Redis
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+
+# Eureka
+eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
+eureka.instance.instance-id=${spring.application.name}:${random.value}
+
+# Resilience4j Circuit Breaker (userService)
+resilience4j.circuitbreaker.instances.userService.slidingWindowSize=10
+resilience4j.circuitbreaker.instances.userService.failureRateThreshold=50
+resilience4j.circuitbreaker.instances.userService.waitDurationInOpenState=10s
+resilience4j.circuitbreaker.instances.userService.permittedNumberOfCallsInHalfOpenState=3
+resilience4j.circuitbreaker.instances.userService.automaticTransitionFromOpenToHalfOpenEnabled=true
+
+# Resilience4j Retry (userService)
+resilience4j.retry.instances.userService.maxAttempts=3
+resilience4j.retry.instances.userService.waitDuration=1s
+
+# Feign
+spring.cloud.openfeign.circuitbreaker.enabled=true
+```
+
+### User Service (`user-service/application.properties`)
+
+```properties
+server.port=8089
+spring.application.name=user-service
+
+# MySQL
+spring.datasource.url=jdbc:mysql://localhost:3306/db_users?createDatabaseIfNotExist=true
+spring.datasource.username=root
+spring.datasource.password=admin
+
+# JPA
+spring.jpa.hibernate.ddl-auto=update
+
+# Redis
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+
+# Eureka
+eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
+eureka.instance.instance-id=${spring.application.name}:${random.value}
 ```
 
 ---
 
-## 🐛 Troubleshooting Guide
+## 🗺️ Future Improvements
 
-### Problem 1: Services Not Registering with Eureka
+> Items are tagged **[High]**, **[Medium]**, or **[Low]** by priority.
 
-**Symptoms:**
-- Service starts but doesn't appear in Eureka dashboard
-- "Cannot execute request on any known server" error
+### 🔐 Security
 
-**Solutions:**
-1. **Check Discovery Server is running first**
-   ```bash
-   # Verify Eureka is accessible
-   curl http://localhost:8761
-   ```
+| Priority | Improvement |
+|---|---|
+| **[High]** | Implement JWT authentication — issue a signed token on login, validate at API Gateway level, remove `anyRequest().authenticated()` dead code |
+| **[High]** | Externalize secrets — move DB passwords, Redis credentials to environment variables or Spring Cloud Config / Vault |
+| **[High]** | Validate image MIME types server-side (Apache Tika or file magic bytes), prevent content-type spoofing |
+| **[Medium]** | Add rate limiting at the API Gateway (Spring Cloud Gateway `RequestRateLimiter` filter with Redis) |
+| **[Medium]** | Add `X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy` headers via Gateway filter |
+| **[Low]** | Restrict internal endpoints (`/api/users/{id}`) to internal network only (IP filter or mutual TLS) |
 
-2. **Check application.properties**
-   ```properties
-   # Should have:
-   eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
-   ```
+### 🧪 Testing
 
-3. **Wait 30 seconds** - Registration isn't instant
-   - Services heartbeat every 30 seconds
-   - Refresh Eureka dashboard after waiting
+| Priority | Improvement |
+|---|---|
+| **[High]** | Add integration tests for item-service controller (currently no `ItemControllerTest`) |
+| **[High]** | Add JaCoCo code coverage reporting; enforce minimum thresholds in CI |
+| **[Medium]** | Add contract tests (Spring Cloud Contract or Pact) between item-service (consumer) and user-service (provider) |
+| **[Medium]** | Add end-to-end tests against a Testcontainers-based MySQL + Redis stack |
+| **[Low]** | Add load/stress tests (Gatling or JMeter) for item search and image serving |
 
-4. **Check console logs for errors**
-   ```
-   Look for: "DiscoveryClient_[SERVICE-NAME] - registration status: 204"
-   ```
+### 📊 Logging & Observability
 
----
+| Priority | Improvement |
+|---|---|
+| **[High]** | Implement distributed tracing (Spring Cloud Sleuth + Zipkin or OpenTelemetry) — add correlation/trace IDs across Feign calls |
+| **[High]** | Replace SLF4J console logging with structured JSON logging (Logstash encoder) for log aggregation |
+| **[Medium]** | Expose Micrometer metrics (Prometheus endpoint) for Redis cache hit/miss ratio, circuit breaker state, HTTP latency |
+| **[Medium]** | Configure Grafana + Prometheus dashboards for real-time monitoring |
+| **[Low]** | Add request-scoped MDC (Mapped Diagnostic Context) with userId, requestId for all log entries |
 
-### Problem 2: Database Connection Failures
+### ⚡ Performance & Scalability
 
-**Symptoms:**
-- `Communications link failure`
-- `Access denied for user 'root'@'localhost'`
+| Priority | Improvement |
+|---|---|
+| **[High]** | Move image storage out of MySQL (`LONGBLOB`) to object storage (MinIO or S3-compatible) — current approach degrades DB performance at scale |
+| **[High]** | Add Redis TTL-based cache warming for frequently accessed categories |
+| **[Medium]** | Replace synchronous Feign owner verification with an event-driven approach (Kafka/RabbitMQ) to decouple item and user services |
+| **[Medium]** | Add database connection pooling configuration (HikariCP settings: pool size, timeout, keepalive) |
+| **[Medium]** | Implement Spring Cache `@CachePut` for `updateItem` to avoid full cache eviction |
+| **[Low]** | Enable HTTP/2 at the gateway level for multiplexed frontend connections |
+| **[Low]** | Add database read replicas with Spring's `AbstractRoutingDataSource` for read-heavy item queries |
 
-**Solutions:**
-1. **Verify MySQL is running**
-   ```bash
-   # Windows
-   Get-Service MySQL80
-   # Should show: Status: Running
-   ```
+### 🧹 Code Quality
 
-2. **Test database connection**
-   ```bash
-   mysql -u root -p
-   # Enter password and see if you can connect
-   ```
+| Priority | Improvement |
+|---|---|
+| **[High]** | Introduce a dedicated `RegisterRequest` DTO for user creation — the `POST /register` endpoint currently accepts the raw `User` entity, exposing internal model fields |
+| **[Medium]** | Standardize `LoginRequest`/`LoginResponse` to use Lombok `@Data`/`@Builder` (currently manual getters/setters) for consistency with the rest of the codebase |
+| **[Medium]** | Extract `ItemService.verifyOwnerExists()` circuit breaker into a dedicated `UserVerificationService` class |
+| **[Medium]** | Add OpenAPI annotations (`@Operation`, `@ApiResponse`, `@Schema`) to controllers for richer Swagger documentation |
+| **[Low]** | Remove duplicate `LoggingAspect` code between item-service and user-service — extract to a shared library or common module |
+| **[Low]** | Apply `@TrackExecutionTime` to slow operations (image fetching, search queries) in item-service |
 
-3. **Check credentials in application.properties**
-   ```properties
-   spring.datasource.username=root
-   spring.datasource.password=YOUR_ACTUAL_PASSWORD
-   ```
+### 🛠️ Developer Experience
 
-4. **Verify databases exist**
-   ```sql
-   SHOW DATABASES;
-   -- Should see: db_items, db_users
-   ```
-
-5. **Check MySQL port**
-   ```properties
-   # Default is 3306
-   spring.datasource.url=jdbc:mysql://localhost:3306/db_items
-   ```
-
----
-
-### Problem 3: CORS Errors in Browser Console
-
-**Symptoms:**
-```
-Access to XMLHttpRequest at 'http://localhost:8080/api/items' 
-from origin 'http://localhost:5173' has been blocked by CORS policy
-```
-
-**Solutions:**
-1. **Verify CORS configuration exists**
-   - File: `api-gateway/src/main/java/com/ecotrack/gateway/config/CorsConfig.java`
-   - Should define `CorsWebFilter` bean
-
-2. **Check allowed origin**
-   ```java
-   corsConfiguration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
-   ```
-
-3. **Restart API Gateway** after CORS config changes
-   ```bash
-   # Stop (Ctrl+C) and restart
-   mvn spring-boot:run
-   ```
-
-4. **Check browser dev tools**
-   - Network tab → OPTIONS request should return 200 OK
-   - Response headers should include:
-     - `Access-Control-Allow-Origin: http://localhost:5173`
-     - `Access-Control-Allow-Credentials: true`
+| Priority | Improvement |
+|---|---|
+| **[High]** | Add Docker Compose file to spin up MySQL, Redis, and all microservices with a single command |
+| **[Medium]** | Add GitHub Actions CI pipeline: build, test, code coverage, static analysis (SpotBugs/Checkstyle) |
+| **[Medium]** | Add Spring Boot DevTools for hot reload during development |
+| **[Medium]** | Add a `communication-service` readme and include it in the architecture documentation |
+| **[Low]** | Add a Makefile with common targets: `make start`, `make test`, `make build`, `make clean` |
+| **[Low]** | Add `.env.example` template for environment-specific configuration |
 
 ---
 
-### Problem 4: Frontend Can't Connect to Backend
+## 📝 Documentation Audit Summary
 
-**Symptoms:**
-- `ERR_CONNECTION_REFUSED`
-- `Network Error`
-- API calls timeout
+### What Was Updated (vs. Previous Docs)
+- **Removed:** Claims about JWT authentication, dynamic ports for item/user services (both have fixed ports 8088/8089)
+- **Removed:** "Item image uploads" from future enhancements — it is already implemented
+- **Added:** Redis caching details (TTLs, cache names, eviction triggers)
+- **Added:** Resilience4j circuit breaker and retry configuration
+- **Added:** AOP aspects (LoggingAspect, PerformanceAspect, @TrackExecutionTime)
+- **Added:** Accurate port numbers for all services
+- **Added:** Communication service acknowledgment (5th service, not in scope of this audit)
+- **Added:** Exact test coverage inventory
+- **Added:** Security gap documentation (no JWT token issued post-login)
+- **Added:** `@TrackExecutionTime` custom annotation documentation
+- **Added:** Multipart image upload details and LONGBLOB storage
 
-**Solutions:**
-1. **Verify API Gateway is running**
-   ```bash
-   curl http://localhost:8080/actuator/health
-   # Should return: {"status":"UP"}
-   ```
+### Documentation Gaps Found
+- No dedicated `communication-service` documentation in the project
+- No API versioning strategy documented
+- No runbook for common failure scenarios (Redis down, MySQL down, Eureka down)
+- No documented strategy for password reset or account recovery
 
-2. **Check API base URL in frontend**
-   ```javascript
-   // frontend/src/api/api.js
-   const API_BASE_URL = 'http://localhost:8080/api';
-   ```
-
-3. **Verify all services are UP in Eureka**
-   - http://localhost:8761
-   - All 3 services should show status UP
-
-4. **Check browser console for exact error**
-   - F12 → Console tab
-   - Look for specific error messages
-
-5. **Test API directly with curl/Postman**
-   ```bash
-   curl http://localhost:8080/api/items
-   # If this works, issue is in frontend
-   # If this fails, issue is in backend
-   ```
+### Key Architectural Observations
+1. **Soft foreign key:** `item.owner_id` references users by ID without a database-level foreign key — relies on application-level verification via Feign with circuit breaker fallback that permits creation even when user-service is down.
+2. **Image storage in DB:** Binary images stored as `LONGBLOB` in MySQL — acceptable for a local demo but a significant concern at production scale.
+3. **Login without token:** The authentication flow is incomplete — BCrypt verification is correct, but no credential is issued to the client, making protected endpoints currently inaccessible via standard HTTP clients.
+4. **Security config contradiction:** `anyRequest().authenticated()` is declared but no authentication mechanism is provided (no session, no JWT, no Basic auth) — this means protected endpoints always return 403 for real HTTP clients.
+5. **Test profile isolation is clean:** H2, Eureka disabled, Redis disabled, and Feign circuit breakers all properly configured for test profiles — tests are hermetic.
 
 ---
 
-### Problem 5: Port Already in Use
-
-**Symptoms:**
-```
-Web server failed to start. Port 8080 was already in use.
-```
-
-**Solutions:**
-1. **Find process using the port**
-   ```powershell
-   # PowerShell
-   Get-NetTCPConnection -LocalPort 8080 | 
-     Select-Object -Property LocalPort, OwningProcess
-   
-   # Get process details
-   Get-Process -Id [PID_FROM_ABOVE]
-   ```
-
-2. **Kill the process**
-   ```powershell
-   Stop-Process -Id [PID] -Force
-   ```
-
-3. **Change service port (alternative)**
-   ```properties
-   # In application.properties
-   server.port=8081  # Use different port
-   ```
-
----
-
-### Problem 6: Frontend Build Errors
-
-**Symptoms:**
-- `npm run dev` fails
-- `Module not found` errors
-- React import errors
-
-**Solutions:**
-1. **Delete node_modules and reinstall**
-   ```bash
-   cd frontend
-   Remove-Item -Recurse -Force node_modules
-   Remove-Item package-lock.json
-   npm install
-   ```
-
-2. **Clear npm cache**
-   ```bash
-   npm cache clean --force
-   npm install
-   ```
-
-3. **Check Node.js version**
-   ```bash
-   node -v  # Should be v18 or higher
-   npm -v   # Should be v9 or higher
-   ```
-
-4. **Verify all dependencies installed**
-   ```bash
-   npm list
-   # Check for missing or conflicting dependencies
-   ```
-
----
-
-### Problem 7: Dark Mode Not Working
-
-**Symptoms:**
-- Theme toggle doesn't change colors
-- Colors don't transition smoothly
-
-**Solutions:**
-1. **Check Tailwind dark mode config**
-   ```javascript
-   // tailwind.config.js
-   module.exports = {
-     darkMode: 'class',  // Must be 'class' not 'media'
-     // ...
-   }
-   ```
-
-2. **Verify ThemeContext is wrapping App**
-   ```jsx
-   // App.jsx
-   <ThemeProvider>
-     <Router>
-       {/* Your app */}
-     </Router>
-   </ThemeProvider>
-   ```
-
-3. **Check localStorage persistence**
-   ```javascript
-   // Browser console
-   localStorage.getItem('theme')  // Should return 'light' or 'dark'
-   ```
-
-4. **Inspect HTML element**
-   ```javascript
-   // Browser console
-   document.documentElement.classList
-   // Should contain 'light' or 'dark'
-   ```
-
----
-
-## 📊 Performance Metrics
-
-### Backend Performance
-- **Service Startup Time:** 8-12 seconds per service
-- **Eureka Registration:** 30 seconds (first heartbeat)
-- **API Response Time:** 50-150ms (average)
-- **Database Queries:** 10-30ms (average)
-- **Gateway Overhead:** < 5ms
-
-### Frontend Performance
-- **Initial Load:** 1-2 seconds
-- **Lighthouse Score:** 95+ (Performance)
-- **Bundle Size:** ~200KB (gzipped)
-- **Time to Interactive:** < 2 seconds
-- **First Contentful Paint:** < 1 second
-
----
-
-## 🎓 Learning Resources
-
-### Spring Boot & Microservices
-- [Spring Boot Documentation](https://spring.io/projects/spring-boot)
-- [Spring Cloud Netflix](https://spring.io/projects/spring-cloud-netflix)
-- [Microservices Pattern](https://microservices.io/)
-- [Eureka Wiki](https://github.com/Netflix/eureka/wiki)
-
-### React & Frontend
-- [React Documentation](https://react.dev/)
-- [Framer Motion Docs](https://www.framer.com/motion/)
-- [Tailwind CSS Docs](https://tailwindcss.com/)
-- [Lucide Icons](https://lucide.dev/)
-
-### Best Practices
-- [12-Factor App](https://12factor.net/)
-- [REST API Design](https://restfulapi.net/)
-- [Git Workflow](https://www.atlassian.com/git/tutorials/comparing-workflows)
-
----
-
-## 🚀 Future Enhancements (Roadmap)
-
-### Phase 1 - Security
-- [ ] JWT authentication and authorization
-- [ ] Password hashing with BCrypt
-- [ ] Role-based access control (RBAC)
-- [ ] API rate limiting
-- [ ] HTTPS/TLS encryption
-
-### Phase 2 - Features
-- [ ] Image upload for items (AWS S3 or local)
-- [ ] Item booking/reservation system
-- [ ] User-to-user messaging
-- [ ] Rating and review system
-- [ ] Email notifications
-- [ ] Push notifications
-
-### Phase 3 - DevOps
-- [ ] Docker containerization
-- [ ] Docker Compose orchestration
-- [ ] CI/CD pipeline (GitHub Actions)
-- [ ] Kubernetes deployment
-- [ ] Monitoring (Prometheus + Grafana)
-- [ ] Centralized logging (ELK stack)
-
-### Phase 4 - Testing
-- [ ] Unit tests (JUnit + Mockito)
-- [ ] Integration tests
-- [ ] E2E tests (Selenium/Cypress)
-- [ ] Load testing (JMeter)
-- [ ] API documentation (Swagger/OpenAPI)
-
----
-
-## 🤝 Contributing
-
-This is an educational project, but contributions are welcome!
-
-### How to Contribute
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Code Style
-- **Java:** Follow Spring Boot conventions
-- **JavaScript:** Use ESLint + Prettier
-- **Commits:** Use conventional commits format
-
----
-
-## 📄 License
-
-This project is for **educational purposes only**. Feel free to use, modify, and learn from it!
-
----
-
-## 🙏 Acknowledgments
-
-- **Netflix OSS** - For Eureka and microservices patterns
-- **Spring Team** - For excellent Spring Boot framework
-- **React Team** - For the React library
-- **Vercel** - For Framer Motion library
-- **Lucide** - For beautiful open-source icons
-- **Tailwind Labs** - For Tailwind CSS
-
----
-
-## 📞 Support & Contact
-
-**Issues?** Open an issue in the repository with:
-- Detailed description of the problem
-- Steps to reproduce
-- Console logs/error messages
-- System information (OS, Java version, Node version)
-
----
-
-**Built with ❤️ for the EcoTrack Community Sharing Platform**
-
-*Last Updated: February 13, 2026*
-
----
-
-## 📸 Screenshots
-
-### Light Mode - Home Page
-- Animated sparkles icon
-- Three feature cards with staggered animation
-- Magnetic buttons with hover effects
-- Spotlight background following mouse
-
-### Dark Mode - Dashboard
-- Glassmorphic sidebar with navigation
-- Theme-adapted colors
-- Smooth 500ms transition
-- All components maintain functionality
-
-### Items Page - Staggered Animation
-- Sequential card entrance (0.1s delay)
-- Search with magnetic button
-- Filter toggle buttons
-- Availability badges (green/red)
-
-### Registration Form - Glassmorphic Design
-- Icon-enhanced input fields
-- Loading states with spinners
-- Error handling with AlertCircle icons
-- Form validation
-
----
-
-**End of Documentation** 🎉
+**EcoTrack Backend — Source-Verified Documentation | June 2026 🌱**

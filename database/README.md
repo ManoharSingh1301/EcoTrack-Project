@@ -15,7 +15,8 @@
    ```
 3. Run the setup script:
    ```
-   source C:/Users/2460672/workk/database/setup.sql
+    source C:/Users/Farhaat/OneDrive/Desktop/EcoTrack/database/setup.sql
+    (Or source ./database/setup.sql depending on your current directory)
    ```
    Or manually execute:
    ```sql
@@ -36,7 +37,7 @@
 ### Item Service Database: `db_items`
 - **Host:** localhost:3306
 - **Username:** root
-- **Password:** root
+- **Password:** admin
 
 Tables will be auto-created by Spring Boot:
 - `items` - stores all shareable items
@@ -44,7 +45,7 @@ Tables will be auto-created by Spring Boot:
 ### User Service Database: `db_users`
 - **Host:** localhost:3306
 - **Username:** root
-- **Password:** root
+- **Password:** admin
 
 Tables will be auto-created by Spring Boot:
 - `users` - stores user profiles and credentials
