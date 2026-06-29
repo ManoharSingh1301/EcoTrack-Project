@@ -51,10 +51,10 @@ public class ItemController {
 
     @GetMapping("/available/page")
     public ResponseEntity<Page<ItemResponse>> getAvailableItemsPaginated(
-            @RequestParam(defaultValue = "0")          int page,
-            @RequestParam(defaultValue = "10")         int size,
-            @RequestParam(defaultValue = "createdAt")  String sortBy,
-            @RequestParam(defaultValue = "desc")       String direction) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction) {
         Sort sort = direction.equalsIgnoreCase("asc")
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
@@ -88,7 +88,8 @@ public class ItemController {
 
     /**
      * Creates an item owned by the authenticated user.
-     * The ownerId from the request body is ignored — identity comes from the JWT via
+     * The ownerId from the request body is ignored — identity comes from the JWT
+     * via
      * the X-User-Id header injected by the API Gateway's JwtAuthenticationFilter.
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -101,6 +102,22 @@ public class ItemController {
         itemRequest.setOwnerId(authenticatedUserId);
 
         ItemResponse createdItem = itemService.createItem(itemRequest, image);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdItem);
+    }
+
+    /**
+     * JSON-only variant of createItem — no image upload.
+     * Accepts a plain {@code application/json} body so callers can POST without
+     * wrapping the payload in multipart/form-data.
+     */
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ItemResponse> createItemJson(
+            @Valid @RequestBody ItemRequest itemRequest,
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
+
+        itemRequest.setOwnerId(authenticatedUserId);
+
+        ItemResponse createdItem = itemService.createItem(itemRequest, null);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdItem);
     }
 
@@ -156,4 +173,3 @@ public class ItemController {
         return ResponseEntity.noContent().build();
     }
 }
-

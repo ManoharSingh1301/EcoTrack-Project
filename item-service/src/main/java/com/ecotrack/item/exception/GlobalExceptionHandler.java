@@ -5,9 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -93,6 +95,36 @@ public class GlobalExceptionHandler {
                 .path(request.getRequestURI())
                 .timestamp(LocalDateTime.now())
                 .validationErrors(validationErrors)
+                .build();
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleUnsupportedMediaType(
+            HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
+        log.warn("Unsupported media type: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.builder()
+                .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value())
+                .error("Unsupported Media Type")
+                .message("Content-Type '" + ex.getContentType() + "' is not supported for this endpoint. "
+                        + "Use 'multipart/form-data' (with an 'item' part) or 'application/json'.")
+                .path(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
+                .build();
+        return new ResponseEntity<>(error, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingRequestPart(
+            MissingServletRequestPartException ex, HttpServletRequest request) {
+        log.warn("Missing request part: {}", ex.getRequestPartName());
+        ErrorResponse error = ErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Bad Request")
+                .message("Required multipart part '" + ex.getRequestPartName() + "' is missing. "
+                        + "When sending multipart/form-data, include an 'item' part with Content-Type application/json.")
+                .path(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
                 .build();
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
