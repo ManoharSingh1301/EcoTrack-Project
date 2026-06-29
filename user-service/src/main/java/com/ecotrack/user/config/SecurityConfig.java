@@ -15,30 +15,14 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
-                        // Allow public access to Swagger UI and OpenAPI docs
-                        .requestMatchers(
-                                "/swagger-ui.html",
-                                "/swagger-ui/**",
-                                "/v3/api-docs",
-                                "/v3/api-docs/**",
-                                "/actuator/health",
-                                "/actuator/info",
-                                "/webjars/**")
-                        .permitAll()
-                        // Allow public access to user registration and login
-                        .requestMatchers(
-                                "/api/users/register",
-                                "/api/users/login")
-                        .permitAll()
-                        // Allow internal service-to-service calls (e.g., Feign from item-service)
-                        .requestMatchers(
-                                "/api/users/{id}",
-                                "/api/users/username/**")
-                        .permitAll()
-                        // Require authentication for all other endpoints
-                        .anyRequest().authenticated())
+                        // All JWT enforcement is handled at the API Gateway (JwtAuthenticationFilter).
+                        // user-service itself permits all requests so that:
+                        //   • Feign calls from item-service pass through without credentials
+                        //   • Internal service-to-service traffic is never blocked here
+                        .anyRequest().permitAll())
                 .httpBasic(basic -> basic.disable());
 
         return http.build();
     }
 }
+

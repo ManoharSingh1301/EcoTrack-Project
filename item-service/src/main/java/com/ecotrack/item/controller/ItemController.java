@@ -2,6 +2,7 @@ package com.ecotrack.item.controller;
 
 import com.ecotrack.item.dto.ItemRequest;
 import com.ecotrack.item.dto.ItemResponse;
+import com.ecotrack.item.exception.UnauthorizedActionException;
 import com.ecotrack.item.model.Item;
 import com.ecotrack.item.service.ItemService;
 import jakarta.validation.Valid;
@@ -26,6 +27,8 @@ public class ItemController {
 
     private final ItemService itemService;
 
+    // ── Read-only endpoints (public — no ownership check needed) ───────────────
+
     @GetMapping
     public ResponseEntity<List<ItemResponse>> getAllItems() {
         return ResponseEntity.ok(itemService.getAllItems());
@@ -48,10 +51,10 @@ public class ItemController {
 
     @GetMapping("/available/page")
     public ResponseEntity<Page<ItemResponse>> getAvailableItemsPaginated(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String direction) {
+            @RequestParam(defaultValue = "0")          int page,
+            @RequestParam(defaultValue = "10")         int size,
+            @RequestParam(defaultValue = "createdAt")  String sortBy,
+            @RequestParam(defaultValue = "desc")       String direction) {
         Sort sort = direction.equalsIgnoreCase("asc")
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
@@ -69,23 +72,6 @@ public class ItemController {
         return ResponseEntity.ok(itemService.searchItemsByName(name));
     }
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ItemResponse> createItem(
-            @Valid @RequestPart("item") ItemRequest itemRequest,
-            @RequestPart(value = "image", required = false) MultipartFile image) {
-        ItemResponse createdItem = itemService.createItem(itemRequest, image);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdItem);
-    }
-
-    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ItemResponse> updateItem(
-            @PathVariable Long id,
-            @Valid @RequestPart("item") ItemRequest itemRequest,
-            @RequestPart(value = "image", required = false) MultipartFile image) {
-        ItemResponse updatedItem = itemService.updateItem(id, itemRequest, image);
-        return ResponseEntity.ok(updatedItem);
-    }
-
     @GetMapping("/{id}/image")
     public ResponseEntity<byte[]> getItemImage(@PathVariable Long id) {
         Item item = itemService.getItemById(id);
@@ -98,15 +84,76 @@ public class ItemController {
         return new ResponseEntity<>(item.getImageData(), headers, HttpStatus.OK);
     }
 
-    @PatchMapping("/{id}/toggle-availability")
-    public ResponseEntity<ItemResponse> toggleAvailability(@PathVariable Long id) {
-        ItemResponse item = itemService.toggleAvailability(id);
-        return ResponseEntity.ok(item);
+    // ── Write endpoints (require X-User-Id injected by gateway) ───────────────
+
+    /**
+     * Creates an item owned by the authenticated user.
+     * The ownerId from the request body is ignored — identity comes from the JWT via
+     * the X-User-Id header injected by the API Gateway's JwtAuthenticationFilter.
+     */
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ItemResponse> createItem(
+            @Valid @RequestPart("item") ItemRequest itemRequest,
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
+
+        // Enforce: the item owner is always the authenticated caller
+        itemRequest.setOwnerId(authenticatedUserId);
+
+        ItemResponse createdItem = itemService.createItem(itemRequest, image);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdItem);
     }
 
+    /**
+     * Updates an item — only the owner may update their own item.
+     */
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ItemResponse> updateItem(
+            @PathVariable Long id,
+            @Valid @RequestPart("item") ItemRequest itemRequest,
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
+
+        Item existing = itemService.getItemById(id);
+        if (!existing.getOwnerId().equals(authenticatedUserId)) {
+            throw new UnauthorizedActionException("You do not own this item");
+        }
+
+        ItemResponse updatedItem = itemService.updateItem(id, itemRequest, image);
+        return ResponseEntity.ok(updatedItem);
+    }
+
+    /**
+     * Toggles item availability — only the owner may change their own item.
+     */
+    @PatchMapping("/{id}/toggle-availability")
+    public ResponseEntity<ItemResponse> toggleAvailability(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
+
+        Item existing = itemService.getItemById(id);
+        if (!existing.getOwnerId().equals(authenticatedUserId)) {
+            throw new UnauthorizedActionException("You do not own this item");
+        }
+
+        return ResponseEntity.ok(itemService.toggleAvailability(id));
+    }
+
+    /**
+     * Deletes an item — only the owner may delete their own item.
+     */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteItem(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteItem(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
+
+        Item existing = itemService.getItemById(id);
+        if (!existing.getOwnerId().equals(authenticatedUserId)) {
+            throw new UnauthorizedActionException("You do not own this item");
+        }
+
         itemService.deleteItem(id);
         return ResponseEntity.noContent().build();
     }
 }
+

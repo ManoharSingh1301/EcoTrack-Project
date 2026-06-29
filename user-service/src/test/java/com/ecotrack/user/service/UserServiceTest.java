@@ -8,6 +8,7 @@ import com.ecotrack.user.exception.DuplicateResourceException;
 import com.ecotrack.user.exception.ResourceNotFoundException;
 import com.ecotrack.user.model.User;
 import com.ecotrack.user.repository.UserRepository;
+import com.ecotrack.user.security.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -36,6 +37,9 @@ class UserServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private JwtUtil jwtUtil;
 
     @InjectMocks
     private UserService userService;
@@ -250,12 +254,14 @@ class UserServiceTest {
 
             when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
             when(passwordEncoder.matches("correctPassword", "hashedPassword")).thenReturn(true);
+            when(jwtUtil.generateToken(testUser)).thenReturn("mock.jwt.token");
 
             LoginResponse response = userService.login(request);
 
             assertThat(response.getUserId()).isEqualTo(1L);
             assertThat(response.getUsername()).isEqualTo("testuser");
             assertThat(response.getMessage()).isEqualTo("Login successful");
+            assertThat(response.getToken()).isEqualTo("mock.jwt.token");
         }
 
         @Test

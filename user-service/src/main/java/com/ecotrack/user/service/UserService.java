@@ -8,6 +8,7 @@ import com.ecotrack.user.exception.DuplicateResourceException;
 import com.ecotrack.user.exception.ResourceNotFoundException;
 import com.ecotrack.user.model.User;
 import com.ecotrack.user.repository.UserRepository;
+import com.ecotrack.user.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -27,6 +28,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
     // ── Mapper ─────────────────────────────────────────────────────────────────
     public UserResponse toResponse(User user) {
@@ -141,12 +143,16 @@ public class UserService {
             throw new AuthenticationException("Invalid username or password");
         }
 
+        // Generate a signed JWT for the authenticated user
+        String token = jwtUtil.generateToken(user);
+
         log.info("Login successful for user: {}", loginRequest.getUsername());
         return new LoginResponse(
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
                 user.getFullName(),
-                "Login successful");
+                "Login successful",
+                token);
     }
 }
