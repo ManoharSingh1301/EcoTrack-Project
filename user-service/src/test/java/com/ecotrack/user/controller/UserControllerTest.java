@@ -148,7 +148,7 @@ class UserControllerTest {
         @DisplayName("should login successfully")
         void shouldLoginSuccessfully() throws Exception {
             LoginRequest request = new LoginRequest("testuser", "password123");
-            LoginResponse response = new LoginResponse(1L, "testuser", "test@ecotrack.com", "Test User", "Login successful");
+            LoginResponse response = new LoginResponse(1L, "testuser", "test@ecotrack.com", "Test User", "Login successful", "test.jwt.token");
 
             when(userService.login(any(LoginRequest.class))).thenReturn(response);
 
