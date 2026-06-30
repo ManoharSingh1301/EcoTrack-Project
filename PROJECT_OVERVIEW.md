@@ -156,6 +156,7 @@ React Frontend (Port 5173)
 | `GET` | `/api/items/search?name=` | Case-insensitive name search |
 | `GET` | `/api/items/{id}/image` | Serve item image as raw bytes with correct Content-Type |
 | `POST` | `/api/items` | Create item (multipart/form-data: `item` part + optional `image` part) |
+| `POST` | `/api/items` | Create item (plain `application/json` body - no image) |
 | `PUT` | `/api/items/{id}` | Update item (multipart/form-data; ownership NOT transferable) |
 | `PATCH` | `/api/items/{id}/toggle-availability` | Toggle `available` flag |
 | `DELETE` | `/api/items/{id}` | Delete item |
@@ -214,7 +215,7 @@ React Frontend (Port 5173)
 | `PUT` | `/api/users/{id}` | Yes | Update user profile |
 | `DELETE` | `/api/users/{id}` | Yes | Delete user |
 
-> **Note:** Login does **not** issue a JWT or session token. The `LoginResponse` returns `{userId, username, email, fullName, message}` only. There is no stateless token issued.
+> **Note:** Login issues a signed JWT token on success. The `LoginResponse` returns `{userId, username, email, fullName, token, message}` where `token` is the JWT bearer token. Use this token in the `Authorization: Bearer <token>` header for subsequent requests.
 
 #### Key Implementation Details
 
@@ -342,14 +343,14 @@ Serialization: `GenericJackson2JsonRedisSerializer` (JSON format). Null values a
 | Layer | Mechanism | Details |
 |---|---|---|
 | Password storage | BCrypt | `BCryptPasswordEncoder` in user-service |
-| API authentication | Spring Security | All non-public user endpoints require authentication; **no JWT or session issued** |
+| API authentication | JWT / Spring Security | Non-public user endpoints secured via JWT validated at API Gateway layer |
 | CORS | CorsWebFilter (gateway) | Allows `http://localhost:5173`, all standard methods/headers, credentials |
 | CSRF | Disabled | In user-service and communication-service `SecurityConfig` |
 | Sensitive fields | `@JsonProperty(WRITE_ONLY)` | Password excluded from all responses |
 | Inter-service | Open (permitted) | `/api/users/{id}` and `/api/users/username/**` are publicly accessible |
 | WebSocket auth | Query-param userId | `CustomHandshakeHandler` extracts `userId` from WS upgrade URL; no token validation |
 
-> ⚠️ **Security Gap:** There is no JWT/session token issued after login. After a successful `POST /api/users/login`, the client receives user info but no bearer token. Subsequent calls to protected endpoints (e.g., `GET /api/users` or `DELETE /api/users/{id}`) would require Spring Security credentials that are never provided. In the current configuration, these endpoints effectively block all external callers without a valid credential mechanism.
+> 🔒 **Security Architecture:** Users authenticate via `POST /api/users/login` to obtain a JWT. The API Gateway validates this token at the routing layer (`JwtAuthenticationFilter`) and forwards requests downstream with injected headers (`X-User-Id`, `X-Username`). Downstream microservices enforce authorization via these gateway-supplied headers. Note that the `.env` file's `JWT_SECRET` must be wrapped in double quotes to avoid parsing truncation from `#` characters.
 
 ---
 

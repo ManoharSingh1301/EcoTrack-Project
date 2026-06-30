@@ -245,16 +245,16 @@ java -jar user-service/target/user-service-1.0.0.jar
 | Method | Path | Public | Request Body | Response |
 |---|---|---|---|---|
 | `POST` | `/register` | ✅ | `User` JSON (username, email, password, fullName, address?, phone?, bio?) | `201 UserResponse` |
-| `POST` | `/login` | ✅ | `{username, password}` | `200 LoginResponse` (userId, username, email, fullName, message) |
+| `POST` | `/login` | ✅ | `{username, password}` | `200 LoginResponse` (userId, username, email, fullName, token, message) |
 | `GET` | `/` | 🔐 | — | `200 List<UserResponse>` |
 | `GET` | `/{id}` | ✅* | — | `200 UserResponse` |
 | `GET` | `/username/{username}` | ✅* | — | `200 UserResponse` |
 | `PUT` | `/{id}` | 🔐 | `User` JSON | `200 UserResponse` |
 | `DELETE` | `/{id}` | 🔐 | — | `204 No Content` |
 
-> ✅* = public to allow inter-service Feign calls from item-service. 🔐 = requires authentication (note: no token mechanism is currently implemented — see security notes).
+> ✅* = public to allow inter-service Feign calls from item-service. 🔐 = requires JWT token in the `Authorization: Bearer <token>` header, validated at the API Gateway.
 
-**Login Note:** Login does not issue a JWT or session token. The response is informational only.
+**Login Note:** Login issues a signed JWT token on success. The client must store this token and pass it in the `Authorization` header for subsequent requests to protected endpoints.
 
 **Validation Rules:**
 - `username`: 3–50 characters, unique
@@ -279,6 +279,7 @@ java -jar user-service/target/user-service-1.0.0.jar
 | `GET` | `/search?name=` | query param | `200 List<ItemResponse>` |
 | `GET` | `/{id}/image` | — | `200 byte[]` with correct Content-Type |
 | `POST` | `/` | `multipart/form-data`: `item` (JSON) + optional `image` | `201 ItemResponse` |
+| `POST` | `/` | `application/json`: `ItemRequest` JSON (no image) | `201 ItemResponse` |
 | `PUT` | `/{id}` | `multipart/form-data`: `item` (JSON) + optional `image` | `200 ItemResponse` |
 | `PATCH` | `/{id}/toggle-availability` | — | `200 ItemResponse` |
 | `DELETE` | `/{id}` | — | `204 No Content` |
@@ -404,13 +405,16 @@ All errors return a consistent JSON body:
 | Inter-service endpoints | `/api/users/{id}` and `/api/users/username/**` permitted without auth |
 | WebSocket identity | `userId` query param on WS upgrade; no token validation — users can claim any ID |
 
+### 🔒 Security Architecture
+
+Users authenticate via `POST /api/users/login` to obtain a JWT. The API Gateway validates this token at the routing layer (`JwtAuthenticationFilter`) and forwards requests downstream with injected headers (`X-User-Id`, `X-Username`). Downstream microservices enforce authorization via these gateway-supplied headers. Note that the `.env` file's `JWT_SECRET` must be wrapped in double quotes to avoid parsing truncation from `#` characters.
+
 ### ⚠️ Known Security Gaps
 
-1. **No token issuance:** Login returns user info but no JWT or session token. Protected endpoints (requiring authentication) are effectively unreachable from standard clients without implementing an auth mechanism.
-2. **Hardcoded DB credentials:** `username=root`, `password=admin` in plain `application.properties`. Must be externalized for any non-local deployment.
-3. **No gateway-level authentication:** The API Gateway performs no JWT validation — all routing is pass-through.
-4. **No rate limiting:** No rate limiting at gateway or service level.
-5. **Image MIME type not validated:** Upload accepts any claimed content type; no server-side validation of actual file content.
+1. **Hardcoded DB credentials:** `username=root`, `password=admin` in plain `application.properties`. Must be externalized for any non-local deployment.
+2. **WebSocket Authentication:** The WebSocket upgrade request does not yet validate the JWT token.
+3. **No rate limiting:** No rate limiting at gateway or service level.
+4. **Image MIME type not validated:** Upload accepts any claimed content type; no server-side validation of actual file content.
 
 ---
 
@@ -609,7 +613,6 @@ eureka.instance.instance-id=${spring.application.name}:${random.value}
 
 | Priority | Improvement |
 |---|---|
-| **[High]** | Implement JWT authentication — issue a signed token on login, validate at API Gateway level, remove `anyRequest().authenticated()` dead code |
 | **[High]** | Externalize secrets — move DB passwords, Redis credentials to environment variables or Spring Cloud Config / Vault |
 | **[High]** | Validate image MIME types server-side (Apache Tika or file magic bytes), prevent content-type spoofing |
 | **[Medium]** | Add rate limiting at the API Gateway (Spring Cloud Gateway `RequestRateLimiter` filter with Redis) |
@@ -696,9 +699,8 @@ eureka.instance.instance-id=${spring.application.name}:${random.value}
 ### Key Architectural Observations
 1. **Soft foreign key:** `item.owner_id` references users by ID without a database-level foreign key — relies on application-level verification via Feign with circuit breaker fallback that permits creation even when user-service is down.
 2. **Image storage in DB:** Binary images stored as `LONGBLOB` in MySQL — acceptable for a local demo but a significant concern at production scale.
-3. **Login without token:** The authentication flow is incomplete — BCrypt verification is correct, but no credential is issued to the client, making protected endpoints currently inaccessible via standard HTTP clients.
-4. **Security config contradiction:** `anyRequest().authenticated()` is declared but no authentication mechanism is provided (no session, no JWT, no Basic auth) — this means protected endpoints always return 403 for real HTTP clients.
-5. **Test profile isolation is clean:** H2, Eureka disabled, Redis disabled, and Feign circuit breakers all properly configured for test profiles — tests are hermetic.
+3. **Gateway JWT validation:** The gateway-level `JwtAuthenticationFilter` handles stateless JWT security, transferring user identity downstream via trusted headers.
+4. **Test profile isolation is clean:** H2, Eureka disabled, Redis disabled, and Feign circuit breakers all properly configured for test profiles — tests are hermetic.
 
 ---
 
