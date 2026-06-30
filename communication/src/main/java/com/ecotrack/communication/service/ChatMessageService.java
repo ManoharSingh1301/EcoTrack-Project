@@ -1,10 +1,10 @@
 package com.ecotrack.communication.service;
 
-import com.ecotrack.communication.exception.ResourceNotFoundException;
 import com.ecotrack.communication.model.ChatMessage;
 import com.ecotrack.communication.repository.ChatMessageRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +16,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ChatMessageService {
 
+    private static final String CHAT_CHANNEL = "chat:messages";
+
     private final ChatMessageRepository chatMessageRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Transactional
     public ChatMessage saveMessage(ChatMessage message) {
@@ -27,6 +30,12 @@ public class ChatMessageService {
         }
         ChatMessage saved = chatMessageRepository.save(message);
         log.debug("Chat message saved with id: {}", saved.getId());
+
+        // Publish to Redis so all service instances can deliver the message
+        // to connected WebSocket clients via RedisMessageSubscriber.
+        redisTemplate.convertAndSend(CHAT_CHANNEL, saved);
+        log.debug("Message {} published to Redis channel '{}'", saved.getId(), CHAT_CHANNEL);
+
         return saved;
     }
 

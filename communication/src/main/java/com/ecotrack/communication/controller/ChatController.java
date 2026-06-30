@@ -5,6 +5,7 @@ import com.ecotrack.communication.service.ChatMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -15,7 +16,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/api/chat")
-@CrossOrigin(origins = "http://localhost:5173", allowedHeaders = "*")
+// CORS is handled globally via CorsConfig — no @CrossOrigin annotation needed here.
 @RequiredArgsConstructor
 public class ChatController {
 
@@ -25,32 +26,38 @@ public class ChatController {
     @MessageMapping("/chat.send")
     public void sendMessage(@Payload ChatMessage chatMessage, java.security.Principal principal) {
         if (principal != null && principal.getName() != null) {
-            Long authenticatedUserId = Long.parseLong(principal.getName());
-            if (!authenticatedUserId.equals(chatMessage.getSenderId())) {
-                log.warn("User {} attempted to spoof message as user {}. Overriding senderId.", 
-                         authenticatedUserId, chatMessage.getSenderId());
-                chatMessage.setSenderId(authenticatedUserId);
+            try {
+                Long authenticatedUserId = Long.parseLong(principal.getName());
+                if (!authenticatedUserId.equals(chatMessage.getSenderId())) {
+                    log.warn("User {} attempted to spoof message as user {}. Overriding senderId.",
+                             authenticatedUserId, chatMessage.getSenderId());
+                    chatMessage.setSenderId(authenticatedUserId);
+                }
+            } catch (NumberFormatException e) {
+                // This should not happen because CustomHandshakeHandler now validates
+                // the userId, but we guard here as a safety net.
+                log.warn("Principal name '{}' is not a valid Long — skipping sender ID verification.",
+                         principal.getName());
             }
         }
 
         log.info("WebSocket message received from user {} to user {}",
                 chatMessage.getSenderId(), chatMessage.getRecipientId());
 
-        ChatMessage saved = chatMessageService.saveMessage(chatMessage);
+        // Save the message and publish to Redis.
+        // Delivery to the WebSocket clients is handled by RedisMessageSubscriber.
+        chatMessageService.saveMessage(chatMessage);
 
-        messagingTemplate.convertAndSendToUser(
-                String.valueOf(chatMessage.getRecipientId()),
-                "/queue/messages",
-                saved
-        );
+        log.debug("Message saved and dispatched to Redis relay");
+    }
 
-        messagingTemplate.convertAndSendToUser(
-                String.valueOf(chatMessage.getSenderId()),
-                "/queue/messages",
-                saved
-        );
-
-        log.debug("Message delivered to both participants");
+    /**
+     * Handles any exception thrown during @MessageMapping method processing
+     * and logs it instead of silently dropping the error.
+     */
+    @MessageExceptionHandler
+    public void handleWebSocketException(Exception ex) {
+        log.error("Error processing WebSocket message: {}", ex.getMessage(), ex);
     }
 
     @GetMapping("/history/{user1Id}/{user2Id}")
