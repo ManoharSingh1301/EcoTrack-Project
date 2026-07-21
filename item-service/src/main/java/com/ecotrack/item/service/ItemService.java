@@ -1,7 +1,6 @@
 package com.ecotrack.item.service;
 
-import com.ecotrack.item.client.UserDto;
-import com.ecotrack.item.client.UserServiceClient;
+import com.ecotrack.item.client.OwnerVerifier;
 import com.ecotrack.item.dto.ItemMapper;
 import com.ecotrack.item.dto.ItemRequest;
 import com.ecotrack.item.dto.ItemResponse;
@@ -9,8 +8,6 @@ import com.ecotrack.item.exception.BadRequestException;
 import com.ecotrack.item.exception.ResourceNotFoundException;
 import com.ecotrack.item.model.Item;
 import com.ecotrack.item.repository.ItemRepository;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -33,7 +30,7 @@ public class ItemService {
 
     private final ItemRepository itemRepository;
     private final ItemMapper itemMapper;
-    private final UserServiceClient userServiceClient;
+    private final OwnerVerifier ownerVerifier;
 
     @Transactional(readOnly = true)
     public List<ItemResponse> getAllItems() {
@@ -97,21 +94,6 @@ public class ItemService {
                 .map(itemMapper::toResponse);
     }
 
-    /**
-     * Verifies the owner exists via Feign call to user-service.
-     * Circuit breaker protects against user-service failures.
-     */
-    @CircuitBreaker(name = "userService", fallbackMethod = "verifyOwnerFallback")
-    public UserDto verifyOwnerExists(Long ownerId) {
-        log.info("Verifying owner exists via user-service: {}", ownerId);
-        return userServiceClient.getUserById(ownerId);
-    }
-
-    public UserDto verifyOwnerFallback(Long ownerId, Exception ex) {
-        log.warn("⚠️ User-service unavailable, allowing item creation without owner verification. OwnerId: {}", ownerId);
-        return UserDto.builder().id(ownerId).username("Unverified").build();
-    }
-
     @Caching(evict = {
             @CacheEvict(value = "availableItems", allEntries = true),
             @CacheEvict(value = "itemsByCategory", allEntries = true)
@@ -120,8 +102,8 @@ public class ItemService {
     public ItemResponse createItem(ItemRequest itemRequest, MultipartFile imageFile) {
         log.info("Creating new item: {} for owner: {}", itemRequest.getName(), itemRequest.getOwnerId());
 
-        // Verify owner exists via Feign client
-        verifyOwnerExists(itemRequest.getOwnerId());
+        // Verify owner exists via Feign client (circuit-breaker protected)
+        ownerVerifier.verifyOwnerExists(itemRequest.getOwnerId());
 
         Item item = itemMapper.toEntity(itemRequest);
 
@@ -182,7 +164,8 @@ public class ItemService {
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "availableItems", allEntries = true)
+            @CacheEvict(value = "availableItems", allEntries = true),
+            @CacheEvict(value = "itemsByCategory", allEntries = true)
     })
     @Transactional
     public ItemResponse toggleAvailability(Long id) {

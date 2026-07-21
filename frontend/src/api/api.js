@@ -10,11 +10,27 @@ const api = axios.create({
   timeout: 10000, // 10 second timeout
 });
 
+// Attach the JWT (stored inside the `user` blob at login) to every request
+api.interceptors.request.use((config) => {
+  const stored = localStorage.getItem('user');
+  const token = stored ? JSON.parse(stored).token : null;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Add response interceptor for better error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.code === 'ECONNABORTED') {
+    // Session expired / invalid token → drop the session and bounce to login
+    if (error.response?.status === 401) {
+      localStorage.removeItem('user');
+      if (window.location.pathname !== '/login') {
+        window.location.assign('/login');
+      }
+    } else if (error.code === 'ECONNABORTED') {
       console.error('Request timeout - server may be down');
     } else if (error.code === 'ERR_NETWORK') {
       console.error('Network error - cannot connect to server');
@@ -32,7 +48,7 @@ export const itemsApi = {
   getAvailableItems: () => api.get('/api/items/available'),
   getItemsByOwner: (ownerId) => api.get(`/api/items/owner/${ownerId}`),
   getItemsByCategory: (category) => api.get(`/api/items/category/${category}`),
-  searchItems: (name) => api.get(`/api/items/search?name=${name}`),
+  searchItems: (name) => api.get(`/api/items/search?name=${encodeURIComponent(name)}`),
   createItem: (item) => api.post('/api/items', item),
   updateItem: (id, item) => api.put(`/api/items/${id}`, item),
   toggleAvailability: (id) => api.patch(`/api/items/${id}/toggle-availability`),

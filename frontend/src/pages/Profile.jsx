@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usersApi } from '../api/api';
 
 function Profile({ user, setUser }) {
@@ -12,6 +12,21 @@ function Profile({ user, setUser }) {
     bio: '',
     password: '',
   });
+
+  // Hydrate the full profile (address/phone/bio aren't in the login payload)
+  // so editing doesn't overwrite them with blanks.
+  useEffect(() => {
+    usersApi.getUserById(user.userId)
+      .then(({ data }) => setFormData((prev) => ({
+        ...prev,
+        email: data.email ?? prev.email,
+        fullName: data.fullName ?? prev.fullName,
+        address: data.address ?? '',
+        phone: data.phone ?? '',
+        bio: data.bio ?? '',
+      })))
+      .catch((err) => console.error('Error loading profile:', err));
+  }, [user.userId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

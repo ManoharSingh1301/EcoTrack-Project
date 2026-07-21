@@ -1,7 +1,7 @@
 package com.ecotrack.item.service;
 
+import com.ecotrack.item.client.OwnerVerifier;
 import com.ecotrack.item.client.UserDto;
-import com.ecotrack.item.client.UserServiceClient;
 import com.ecotrack.item.dto.ItemMapper;
 import com.ecotrack.item.dto.ItemRequest;
 import com.ecotrack.item.dto.ItemResponse;
@@ -42,7 +42,7 @@ class ItemServiceTest {
     private ItemMapper itemMapper;
 
     @Mock
-    private UserServiceClient userServiceClient;
+    private OwnerVerifier ownerVerifier;
 
     @InjectMocks
     private ItemService itemService;
@@ -126,7 +126,7 @@ class ItemServiceTest {
         @DisplayName("should create item successfully without image")
         void shouldCreateItemWithoutImage() {
             UserDto mockUser = UserDto.builder().id(100L).username("owner").build();
-            when(userServiceClient.getUserById(100L)).thenReturn(mockUser);
+            when(ownerVerifier.verifyOwnerExists(100L)).thenReturn(mockUser);
             when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> {
                 Item saved = invocation.getArgument(0);
                 saved.setId(1L);
@@ -150,7 +150,7 @@ class ItemServiceTest {
             when(mockFile.getOriginalFilename()).thenReturn("drill.png");
 
             UserDto mockUser = UserDto.builder().id(100L).username("owner").build();
-            when(userServiceClient.getUserById(100L)).thenReturn(mockUser);
+            when(ownerVerifier.verifyOwnerExists(100L)).thenReturn(mockUser);
             when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> {
                 Item saved = invocation.getArgument(0);
                 saved.setId(1L);
@@ -171,7 +171,7 @@ class ItemServiceTest {
             when(mockFile.getBytes()).thenThrow(new IOException("File read error"));
 
             UserDto mockUser = UserDto.builder().id(100L).username("owner").build();
-            when(userServiceClient.getUserById(100L)).thenReturn(mockUser);
+            when(ownerVerifier.verifyOwnerExists(100L)).thenReturn(mockUser);
 
             assertThatThrownBy(() -> itemService.createItem(testItemRequest, mockFile))
                     .isInstanceOf(BadRequestException.class)

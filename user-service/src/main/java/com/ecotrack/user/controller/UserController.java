@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -53,14 +54,28 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponse> updateUser(@PathVariable Long id, @Valid @RequestBody User user) {
+    public ResponseEntity<UserResponse> updateUser(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) Long authenticatedUserId,
+            @RequestBody User user) {
+        requireSelf(id, authenticatedUserId);
         UserResponse updatedUser = userService.updateUser(id, user);
         return ResponseEntity.ok(updatedUser);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteUser(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) Long authenticatedUserId) {
+        requireSelf(id, authenticatedUserId);
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /** A user may only modify or delete their own account. Identity comes from the gateway-verified header. */
+    private void requireSelf(Long pathId, Long authenticatedUserId) {
+        if (authenticatedUserId == null || !authenticatedUserId.equals(pathId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only modify your own account");
+        }
     }
 }
