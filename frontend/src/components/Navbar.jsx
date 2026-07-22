@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Leaf, Package, User, LogOut, LogIn, UserPlus, Moon, Sun, Menu, X } from 'lucide-react';
+import { Leaf, Package, User, LogOut, LogIn, UserPlus, Moon, Sun, Menu, X, List, MessageCircle } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useState } from 'react';
 
@@ -107,8 +107,16 @@ function Navbar({ user, onLogout }) {
                   className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 px-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  <Package className="w-5 h-5" />
+                  <List className="w-5 h-5" />
                   <span>My Items</span>
+                </Link>
+                <Link
+                  to="/chat"
+                  className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 px-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  <span>Messages</span>
                 </Link>
                 <Link
                   to="/profile"

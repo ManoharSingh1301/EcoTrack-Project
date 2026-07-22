@@ -51,6 +51,16 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-websocket</artifactId>
 		</dependency>
+		<!-- Actuator (health/info endpoints) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<!-- Spring AOP (for LoggingAspect) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
 		<!-- Eureka Client -->
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
@@ -68,12 +78,6 @@
 			<artifactId>lombok</artifactId>
 			<version>1.18.42</version>
 			<scope>provided</scope>
-		</dependency>
-
-		<!-- Redis Pub/Sub for message relay -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-redis</artifactId>
 		</dependency>
 
 		<!-- Spring Boot Starter Test -->

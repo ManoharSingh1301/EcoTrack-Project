@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { ToastProvider } from './contexts/ToastContext';
 import Navbar from './components/Navbar';
 import ServiceStatus from './components/ServiceStatus';
 import SpotlightBackground from './components/SpotlightBackground';
@@ -10,6 +11,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Items from './pages/Items';
 import MyItems from './pages/MyItems';
+import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 
 function App() {
@@ -35,6 +37,7 @@ function App() {
 
   return (
     <ThemeProvider>
+      <ToastProvider>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-gray-50 to-green-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-500">
           <SpotlightBackground />
@@ -59,15 +62,20 @@ function App() {
                 path="/my-items" 
                 element={user ? <MyItems user={user} /> : <Navigate to="/login" />} 
               />
-              <Route 
-                path="/profile" 
-                element={user ? <Profile user={user} setUser={setUser} /> : <Navigate to="/login" />} 
+              <Route
+                path="/chat"
+                element={user ? <Chat user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/profile"
+                element={user ? <Profile user={user} setUser={setUser} /> : <Navigate to="/login" />}
               />
             </Routes>
           </main>
           <ServiceStatus />
         </div>
       </Router>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

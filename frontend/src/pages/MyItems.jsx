@@ -1,265 +1,249 @@
 import { useState, useEffect } from 'react';
-import { itemsApi } from '../api/api';
+import { itemsApi, CATEGORIES, parseApiError } from '../api/api';
+import { Plus, Pencil, Trash2, RefreshCw, ImagePlus, Package, X } from 'lucide-react';
+import ItemCard from '../components/ItemCard';
+import Spinner from '../components/Spinner';
+import EmptyState from '../components/EmptyState';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { useToast } from '../contexts/ToastContext';
+
+const EMPTY_FORM = { name: '', description: '', category: '', available: true };
 
 function MyItems({ user }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    category: '',
-    available: true,
-    ownerId: user.userId,
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [confirmId, setConfirmId] = useState(null);
+  const toast = useToast();
 
   useEffect(() => {
     fetchMyItems();
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.userId]);
 
   const fetchMyItems = async () => {
     setLoading(true);
     try {
-      const response = await itemsApi.getItemsByOwner(user.userId);
-      setItems(response.data);
-    } catch (error) {
-      console.error('Error fetching my items:', error);
+      const res = await itemsApi.getItemsByOwner(user.userId);
+      setItems(res.data);
+    } catch (err) {
+      toast.error(parseApiError(err, 'Could not load your items.'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (editingItem) {
-        await itemsApi.updateItem(editingItem.id, formData);
-      } else {
-        await itemsApi.createItem(formData);
-      }
-      setShowForm(false);
-      setEditingItem(null);
-      resetForm();
-      fetchMyItems();
-    } catch (error) {
-      console.error('Error saving item:', error);
-      alert('Failed to save item. Please try again.');
-    }
+  const resetForm = () => {
+    setFormData(EMPTY_FORM);
+    setEditingItem(null);
+    setImageFile(null);
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(null);
   };
 
-  const handleEdit = (item) => {
+  const openCreate = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
+  const openEdit = (item) => {
+    resetForm();
     setEditingItem(item);
     setFormData({
       name: item.name,
-      description: item.description,
+      description: item.description || '',
       category: item.category,
       available: item.available,
-      ownerId: user.userId,
     });
     setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      try {
-        await itemsApi.deleteItem(id);
-        fetchMyItems();
-      } catch (error) {
-        console.error('Error deleting item:', error);
-      }
+  const handleChange = (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setFormData((f) => ({ ...f, [e.target.name]: value }));
+  };
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    } else {
+      setImageFile(null);
+      setImagePreview(null);
     }
   };
 
-  const handleToggleAvailability = async (id) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    // ownerId is required by the backend DTO; the server overrides it with the
+    // authenticated user, but we send it to satisfy validation.
+    const payload = { ...formData, ownerId: user.userId };
+    try {
+      if (editingItem) {
+        await itemsApi.updateItem(editingItem.id, payload, imageFile);
+        toast.success('Item updated');
+      } else {
+        await itemsApi.createItem(payload, imageFile);
+        toast.success('Item listed');
+      }
+      setShowForm(false);
+      resetForm();
+      fetchMyItems();
+    } catch (err) {
+      toast.error(parseApiError(err, 'Failed to save the item.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggle = async (id) => {
     try {
       await itemsApi.toggleAvailability(id);
       fetchMyItems();
-    } catch (error) {
-      console.error('Error toggling availability:', error);
+    } catch (err) {
+      toast.error(parseApiError(err, 'Could not update availability.'));
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      category: '',
-      available: true,
-      ownerId: user.userId,
-    });
+  const doDelete = async () => {
+    const id = confirmId;
+    setConfirmId(null);
+    try {
+      await itemsApi.deleteItem(id);
+      toast.success('Item deleted');
+      fetchMyItems();
+    } catch (err) {
+      toast.error(parseApiError(err, 'Could not delete the item.'));
+    }
   };
 
-  const handleChange = (e) => {
-    const value =
-      e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-    setFormData({
-      ...formData,
-      [e.target.name]: value,
-    });
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-          <p className="text-xl text-gray-600 dark:text-gray-400">Loading your items...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <Spinner label="Loading your items…" />;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center gap-3 mb-2">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">My Items</h1>
-        <button
-          onClick={() => {
-            setShowForm(!showForm);
-            if (showForm) {
-              setEditingItem(null);
-              resetForm();
-            }
-          }}
-          className="flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 shadow-lg transition text-sm sm:text-base"
-        >
-          {showForm ? 'Cancel' : 'Add New Item'}
-        </button>
-      </div>
+    <div className="space-y-6">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">My listings</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage what you share with the community.</p>
+        </div>
+        {showForm ? (
+          <button onClick={() => { setShowForm(false); resetForm(); }} className="btn-ghost self-start">
+            <X className="w-4 h-4" /> Close
+          </button>
+        ) : (
+          <button onClick={openCreate} className="btn-primary self-start">
+            <Plus className="w-4 h-4" /> Add new item
+          </button>
+        )}
+      </header>
 
       {showForm && (
-        <div className="backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border border-white/20 dark:border-gray-700/50 rounded-2xl shadow-2xl p-4 sm:p-6">
-          <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-gray-800 dark:text-white">
-            {editingItem ? 'Edit Item' : 'Add New Item'}
+        <div className="surface rounded-2xl p-5 sm:p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+            {editingItem ? 'Edit item' : 'List a new item'}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-gray-700 dark:text-gray-300 font-semibold mb-2">
-                Item Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition"
-                required
-              />
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Name *</label>
+                <input name="name" value={formData.name} onChange={handleChange} required
+                       minLength={2} maxLength={100} className="input" placeholder="e.g. Cordless drill" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Category *</label>
+                <select name="category" value={formData.category} onChange={handleChange} required className="input">
+                  <option value="" disabled>Choose a category</option>
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
             </div>
 
             <div>
-              <label className="block text-gray-700 dark:text-gray-300 font-semibold mb-2">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows="3"
-                className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition resize-none"
-              />
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Description</label>
+              <textarea name="description" value={formData.description} onChange={handleChange}
+                        rows="3" maxLength={1000} className="input resize-none"
+                        placeholder="Condition, how to borrow, anything useful…" />
             </div>
 
             <div>
-              <label className="block text-gray-700 dark:text-gray-300 font-semibold mb-2">
-                Category *
-              </label>
-              <input
-                type="text"
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition"
-                placeholder="e.g., Tools, Garden, Electronics"
-                required
-              />
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Photo</label>
+              <div className="flex items-center gap-4">
+                <label className="btn-ghost cursor-pointer">
+                  <ImagePlus className="w-4 h-4" /> {imageFile ? 'Change photo' : 'Upload photo'}
+                  <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleFile} className="hidden" />
+                </label>
+                {imagePreview && (
+                  <img src={imagePreview} alt="Preview" className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
+                )}
+                {editingItem?.hasImage && !imagePreview && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Current photo kept unless you upload a new one.</span>
+                )}
+              </div>
             </div>
 
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                name="available"
-                checked={formData.available}
-                onChange={handleChange}
-                className="mr-2 w-4 h-4 accent-green-600"
-              />
-              <label className="text-gray-700 dark:text-gray-300 font-semibold">
-                Available for lending
-              </label>
-            </div>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" name="available" checked={formData.available} onChange={handleChange}
+                     className="w-4 h-4 accent-emerald-600" />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Available for lending</span>
+            </label>
 
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 transition shadow-lg font-semibold"
-            >
-              {editingItem ? 'Update Item' : 'Create Item'}
+            <button type="submit" disabled={saving} className="btn-primary w-full">
+              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : editingItem ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {editingItem ? 'Save changes' : 'Create listing'}
             </button>
           </form>
         </div>
       )}
 
       {items.length === 0 ? (
-        <div className="backdrop-blur-xl bg-white/70 dark:bg-gray-900/70 border border-white/20 dark:border-gray-700/50 rounded-2xl shadow-2xl p-8 sm:p-12 text-center">
-          <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400">
-            You haven't added any items yet.
-          </p>
-        </div>
+        <EmptyState
+          icon={Package}
+          title="No listings yet"
+          message="Add your first item to start sharing."
+          action={!showForm && <button onClick={openCreate} className="btn-primary"><Plus className="w-4 h-4" /> Add item</button>}
+        />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-          {items.map((item) => (
-            <div
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+          {items.map((item, i) => (
+            <ItemCard
               key={item.id}
-              className="backdrop-blur-xl bg-white/70 dark:bg-gray-900/70 border border-white/20 dark:border-gray-700/50 rounded-2xl shadow-xl p-4 sm:p-6 hover:shadow-2xl transition-all duration-300"
-            >
-              <div className="flex justify-between items-start mb-3 sm:mb-4 gap-2">
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white flex-1 min-w-0 break-words">
-                  {item.name}
-                </h3>
-                <span
-                  className={`flex-shrink-0 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
-                    item.available
-                      ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300'
-                      : 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300'
-                  }`}
-                >
-                  {item.available ? 'Available' : 'In Use'}
-                </span>
-              </div>
-
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-2">{item.description}</p>
-
-              <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500 dark:text-gray-500">
-                <p>
-                  <span className="font-semibold">Category:</span>{' '}
-                  {item.category}
-                </p>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  onClick={() => handleEdit(item)}
-                  className="flex-1 min-w-[4rem] bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm transition"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleToggleAvailability(item.id)}
-                  className="flex-1 min-w-[4rem] bg-yellow-500 text-white px-3 py-2 rounded-lg hover:bg-yellow-600 text-sm transition"
-                >
-                  Toggle
-                </button>
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  className="flex-1 min-w-[4rem] bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 text-sm transition"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
+              item={item}
+              index={i}
+              footer={
+                <div className="flex gap-2">
+                  <button onClick={() => openEdit(item)} className="btn-ghost flex-1 py-2 text-sm">
+                    <Pencil className="w-4 h-4" /> Edit
+                  </button>
+                  <button onClick={() => handleToggle(item.id)} className="btn-ghost flex-1 py-2 text-sm"
+                          title={item.available ? 'Mark as in use' : 'Mark as available'}>
+                    <RefreshCw className="w-4 h-4" />
+                    {item.available ? 'In use' : 'Free'}
+                  </button>
+                  <button onClick={() => setConfirmId(item.id)} className="btn-danger py-2 px-3 text-sm" aria-label="Delete item">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              }
+            />
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmId !== null}
+        title="Delete this item?"
+        message="This permanently removes the listing. This can't be undone."
+        onCancel={() => setConfirmId(null)}
+        onConfirm={doDelete}
+      />
     </div>
   );
 }

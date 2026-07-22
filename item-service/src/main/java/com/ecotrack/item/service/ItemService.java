@@ -182,7 +182,8 @@ public class ItemService {
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "availableItems", allEntries = true)
+            @CacheEvict(value = "availableItems", allEntries = true),
+            @CacheEvict(value = "itemsByCategory", allEntries = true)
     })
     @Transactional
     public ItemResponse toggleAvailability(Long id) {

@@ -76,12 +76,12 @@ function ServiceStatus() {
 
       {/* Status Panel */}
       {showStatus && (
-        <div className="absolute bottom-16 right-0 bg-white rounded-lg shadow-xl p-4 w-64 border border-gray-200">
+        <div className="absolute bottom-16 right-0 surface rounded-xl shadow-2xl p-4 w-64">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="font-semibold text-gray-800">Service Status</h3>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100">Service Status</h3>
             <button
               onClick={() => setShowStatus(false)}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
             >
               ✕
             </button>
@@ -90,33 +90,29 @@ function ServiceStatus() {
           <div className="space-y-2">
             {Object.entries(services).map(([key, service]) => (
               <div key={key} className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">{service.name}</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{service.name}</span>
                 <div className="flex items-center space-x-2">
                   <span className={`w-2 h-2 rounded-full ${getStatusColor(service.status)}`} />
-                  <span className="text-xs font-medium">{getStatusText(service.status)}</span>
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{getStatusText(service.status)}</span>
                 </div>
               </div>
             ))}
           </div>
 
           {anyOffline && (
-            <div className="mt-3 pt-3 border-t border-gray-200">
-              <p className="text-xs text-red-600 mb-2">
-                ⚠️ Some services are offline!
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs text-red-600 dark:text-red-400 mb-1">
+                ⚠️ Some services are offline.
               </p>
-              <a
-                href="/TROUBLESHOOTING.md"
-                target="_blank"
-                className="text-xs text-blue-600 hover:underline"
-              >
-                View Troubleshooting Guide →
-              </a>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Check the Eureka dashboard at localhost:8761.
+              </p>
             </div>
           )}
 
           <button
             onClick={checkServices}
-            className="mt-3 w-full text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded"
+            className="mt-3 w-full text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 rounded-lg"
           >
             Refresh Status
           </button>

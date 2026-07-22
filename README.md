@@ -1,6 +1,6 @@
 # 🌱 EcoTrack — Local Community Sharing Platform
 
-A production-grade microservices backend where neighbors can share and lend tools and items within a local community. Built with **Java 17**, **Spring Boot 3.2**, **Spring Cloud 2023.0**, **MySQL**, **Redis**, **WebSocket/STOMP**, and **Netflix Eureka** — designed to run entirely on a local machine.
+A production-grade microservices platform where neighbors can share and lend tools and items within a local community. Built with **Java 17**, **Spring Boot 3.2**, **Spring Cloud 2023.0**, **MySQL**, **WebSocket/STOMP**, **Netflix Eureka**, and a **React + Tailwind** frontend — designed to run entirely on a local machine with only a JDK, Maven, Node, and MySQL (no Redis or other infrastructure required).
 
 ---
 
@@ -15,7 +15,7 @@ A production-grade microservices backend where neighbors can share and lend tool
 - ✅ **Item Management** — CRUD, image upload/serve, availability toggle, category filtering, name search, pagination
 - ✅ **Real-Time Chat** — WebSocket/STOMP messaging between users, item-context chat, persistent history (communication-service)
 - ✅ **Inter-Service Communication** — Feign client (item→user verification) with Resilience4j circuit breaker + retry + fallback
-- ✅ **Distributed Caching** — Redis-backed Spring Cache (available items, items by category, user by ID)
+- ✅ **Caching** — Spring Cache with an in-memory `ConcurrentMapCacheManager` (available items, items by category, user by ID); evicted on writes. No external cache server needed.
 - ✅ **AOP Observability** — Logging aspect (service/controller entry, exit, duration, exceptions) across all 3 domain services; Performance aspect (`@TrackExecutionTime` in item-service)
 - ✅ **Global Exception Handling** — Structured `ErrorResponse` JSON for all error types across all services
 - ✅ **API Documentation** — Swagger UI via Springdoc OpenAPI on item-service and user-service
@@ -48,7 +48,7 @@ React Frontend (Port 5173)
 │  Server  │ │  :8088      │ │  :8089           │ │  :8087                │
 │  :8761   │ │             │ │                  │ │                       │
 │          │ │MySQL:db_items│ │MySQL:db_users    │ │MySQL:db_communication │
-│Netflix   │ │Redis:6379   │ │Redis:6379        │ │                       │
+│Netflix   │ │In-mem cache │ │In-mem cache      │ │                       │
 │Eureka    │ │Feign client │ │BCrypt + Security │ │WebSocket (STOMP)      │
 │(no self- │ │Circuit break│ │AOP logging       │ │Real-time chat         │
 │register) │ │AOP logging  │ │Swagger UI        │ │Chat history REST API  │
@@ -74,7 +74,7 @@ React Frontend (Port 5173)
 | Spring Cloud Circuit Breaker (Resilience4j) | 2023.0.0 BOM | Fault tolerance |
 | Spring Data JPA | 3.2.0 | ORM |
 | Spring Security | 3.2.0 | Password encoding, endpoint security |
-| Spring Data Redis | 3.2.0 | Distributed caching |
+| Spring Cache (ConcurrentMapCacheManager) | 3.2.0 | In-memory caching (no external server) |
 | **Spring WebSocket (STOMP)** | **3.2.0** | **Real-time bidirectional messaging** |
 | Spring AOP | 3.2.0 | Cross-cutting concerns |
 | Spring Boot Actuator | 3.2.0 | Health/info endpoints |
@@ -98,10 +98,9 @@ React Frontend (Port 5173)
 | JDK | 17+ | `java -version` |
 | Maven | 3.8+ | `mvn -version` |
 | MySQL | 8.0+ | `mysql --version` |
-| Redis | 7.0+ | `redis-cli ping` |
 | Node.js | 18+ | `node -v` |
 
-> **Redis is required.** Both item-service and user-service connect to Redis on `localhost:6379`. Services will fail to start if Redis is unavailable.
+> **No Redis / message broker / Docker required.** Caching is in-memory and chat is delivered through Spring's in-memory STOMP broker. The only external service you run is MySQL.
 
 ---
 
@@ -153,18 +152,23 @@ spring.datasource.password=admin   # ← change to your MySQL root password
 
 ---
 
-### ⚡ Phase 2: Redis Setup
+### ⚡ Phase 2: Environment Variables
 
-Ensure Redis is running on the default port:
+The services read secrets from the environment (no hardcoded credentials):
 
 ```bash
 # Linux/macOS
-redis-server
+export DB_USERNAME=root
+export DB_PASSWORD=your_mysql_password
+export JWT_SECRET=change-me-to-a-random-string-at-least-32-chars
 
-# Windows (if Redis installed via Chocolatey or WSL)
-redis-cli ping
-# Expected: PONG
+# Windows PowerShell (persist, then reopen the terminal)
+setx DB_USERNAME "root"
+setx DB_PASSWORD "your_mysql_password"
+setx JWT_SECRET "change-me-to-a-random-string-at-least-32-chars"
 ```
+
+> `JWT_SECRET` must be **≥ 32 characters** (HS256 requirement) and identical for user-service and api-gateway. No Redis step is needed.
 
 ---
 
@@ -557,10 +561,6 @@ spring.jpa.show-sql=true
 spring.servlet.multipart.max-file-size=5MB
 spring.servlet.multipart.max-request-size=5MB
 
-# Redis
-spring.data.redis.host=localhost
-spring.data.redis.port=6379
-
 # Eureka
 eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
 eureka.instance.instance-id=${spring.application.name}:${random.value}
@@ -593,10 +593,6 @@ spring.datasource.password=admin
 
 # JPA
 spring.jpa.hibernate.ddl-auto=update
-
-# Redis
-spring.data.redis.host=localhost
-spring.data.redis.port=6379
 
 # Eureka
 eureka.client.service-url.defaultZone=http://localhost:8761/eureka/

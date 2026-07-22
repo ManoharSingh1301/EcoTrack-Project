@@ -44,11 +44,10 @@ public class ChatController {
         log.info("WebSocket message received from user {} to user {}",
                 chatMessage.getSenderId(), chatMessage.getRecipientId());
 
-        // Save the message and publish to Redis.
-        // Delivery to the WebSocket clients is handled by RedisMessageSubscriber.
+        // Persist the message and deliver it to both participants over WebSocket.
         chatMessageService.saveMessage(chatMessage);
 
-        log.debug("Message saved and dispatched to Redis relay");
+        log.debug("Message saved and delivered over the STOMP broker");
     }
 
     /**
