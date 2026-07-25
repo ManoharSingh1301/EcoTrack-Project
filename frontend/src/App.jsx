@@ -13,6 +13,9 @@ import Items from './pages/Items';
 import MyItems from './pages/MyItems';
 import Chat from './pages/Chat';
 import Profile from './pages/Profile';
+import Dashboard from './pages/Dashboard';
+import BorrowRequests from './pages/BorrowRequests';
+import Favorites from './pages/Favorites';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -48,15 +51,27 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route 
                 path="/login" 
-                element={user ? <Navigate to="/items" /> : <Login onLogin={handleLogin} />} 
+                element={user ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />}
               />
               <Route 
                 path="/register" 
-                element={user ? <Navigate to="/items" /> : <Register onLogin={handleLogin} />} 
+                element={user ? <Navigate to="/dashboard" /> : <Register onLogin={handleLogin} />}
               />
-              <Route 
-                path="/items" 
-                element={user ? <Items user={user} /> : <Navigate to="/login" />} 
+              <Route
+                path="/dashboard"
+                element={user ? <Dashboard user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/items"
+                element={user ? <Items user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/borrow-requests"
+                element={user ? <BorrowRequests user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/favorites"
+                element={user ? <Favorites user={user} /> : <Navigate to="/login" />}
               />
               <Route 
                 path="/my-items" 

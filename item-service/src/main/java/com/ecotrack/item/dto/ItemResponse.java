@@ -20,6 +20,11 @@ public class ItemResponse implements Serializable {
     private Long ownerId;
     private String category;
     private Boolean available;
+    private String condition;
+    private Integer maxBorrowDays;
+    private Double lateFeePerDay;
+    private Double securityDeposit;
+    private Integer borrowCount;
     private boolean hasImage;
     private String imageName;
     private String imageType;

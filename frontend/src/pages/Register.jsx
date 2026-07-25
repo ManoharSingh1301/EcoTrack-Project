@@ -13,12 +13,35 @@ function Register({ onLogin }) {
     phone: '',
   });
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Client-side validation mirroring the server-side Bean Validation rules.
+  const validate = () => {
+    const e = {};
+    const { username, email, password, fullName, phone } = formData;
+    if (username.trim().length < 3 || username.trim().length > 50)
+      e.username = 'Username must be 3–50 characters.';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      e.email = 'Enter a valid email address.';
+    if (password.length < 8)
+      e.password = 'Password must be at least 8 characters.';
+    else if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password))
+      e.password = 'Use a mix of letters and numbers.';
+    if (!fullName.trim())
+      e.fullName = 'Full name is required.';
+    if (phone && !/^[+]?[0-9]{10,15}$/.test(phone))
+      e.phone = 'Phone must be 10–15 digits.';
+    return e;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    const errs = validate();
+    setFieldErrors(errs);
+    if (Object.keys(errs).length > 0) return;
     setLoading(true);
 
     try {
@@ -29,7 +52,7 @@ function Register({ onLogin }) {
         password: formData.password,
       });
       onLogin(loginResponse.data);
-      navigate('/items');
+      navigate('/dashboard');
     } catch (err) {
       console.error('Registration error:', err);
       if (err.response?.data) {
@@ -58,7 +81,13 @@ function Register({ onLogin }) {
       ...formData,
       [e.target.name]: e.target.value,
     });
+    if (fieldErrors[e.target.name]) {
+      setFieldErrors((prev) => ({ ...prev, [e.target.name]: undefined }));
+    }
   };
+
+  const fieldError = (name) =>
+    fieldErrors[name] ? <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors[name]}</p> : null;
 
   return (
     <div className="max-w-md mx-auto px-4 sm:px-0">
@@ -96,6 +125,7 @@ function Register({ onLogin }) {
                 required
               />
             </div>
+            {fieldError('username')}
           </div>
 
           <div>
@@ -114,6 +144,7 @@ function Register({ onLogin }) {
                 required
               />
             </div>
+            {fieldError('email')}
           </div>
 
           <div>
@@ -132,6 +163,7 @@ function Register({ onLogin }) {
                 required
               />
             </div>
+            {fieldError('password') || <p className="mt-1 text-xs text-gray-400">At least 8 characters with letters and numbers.</p>}
           </div>
 
           <div>
@@ -150,6 +182,7 @@ function Register({ onLogin }) {
                 required
               />
             </div>
+            {fieldError('fullName')}
           </div>
 
           <div>
@@ -184,6 +217,7 @@ function Register({ onLogin }) {
                 placeholder="+1 (555) 123-4567"
               />
             </div>
+            {fieldError('phone')}
           </div>
 
           <button

@@ -1,5 +1,5 @@
 import { useTheme } from '../contexts/ThemeContext';
-import { Package, User, List, MessageCircle } from 'lucide-react';
+import { Package, User, List, MessageCircle, LayoutDashboard, Inbox, Heart } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 export default function GlassSidebar({ user }) {
@@ -9,8 +9,11 @@ export default function GlassSidebar({ user }) {
   if (!user) return null;
 
   const menuItems = [
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/items', icon: Package, label: 'Browse Items' },
     { path: '/my-items', icon: List, label: 'My Items' },
+    { path: '/borrow-requests', icon: Inbox, label: 'Borrow Requests' },
+    { path: '/favorites', icon: Heart, label: 'Favorites' },
     { path: '/chat', icon: MessageCircle, label: 'Messages' },
     { path: '/profile', icon: User, label: 'Profile' },
   ];

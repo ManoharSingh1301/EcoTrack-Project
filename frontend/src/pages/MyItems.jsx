@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { itemsApi, CATEGORIES, parseApiError } from '../api/api';
+import { itemsApi, CATEGORIES, CONDITIONS, parseApiError } from '../api/api';
 import { Plus, Pencil, Trash2, RefreshCw, ImagePlus, Package, X } from 'lucide-react';
 import ItemCard from '../components/ItemCard';
 import Spinner from '../components/Spinner';
@@ -7,7 +7,10 @@ import EmptyState from '../components/EmptyState';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToast } from '../contexts/ToastContext';
 
-const EMPTY_FORM = { name: '', description: '', category: '', available: true };
+const EMPTY_FORM = {
+  name: '', description: '', category: '', available: true,
+  condition: 'GOOD', maxBorrowDays: 7, lateFeePerDay: 0, securityDeposit: 0,
+};
 
 function MyItems({ user }) {
   const [items, setItems] = useState([]);
@@ -59,6 +62,10 @@ function MyItems({ user }) {
       description: item.description || '',
       category: item.category,
       available: item.available,
+      condition: item.condition || 'GOOD',
+      maxBorrowDays: item.maxBorrowDays ?? 7,
+      lateFeePerDay: item.lateFeePerDay ?? 0,
+      securityDeposit: item.securityDeposit ?? 0,
     });
     setShowForm(true);
   };
@@ -171,6 +178,30 @@ function MyItems({ user }) {
               <textarea name="description" value={formData.description} onChange={handleChange}
                         rows="3" maxLength={1000} className="input resize-none"
                         placeholder="Condition, how to borrow, anything useful…" />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Condition</label>
+                <select name="condition" value={formData.condition} onChange={handleChange} className="input">
+                  {CONDITIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Max borrow days</label>
+                <input type="number" name="maxBorrowDays" value={formData.maxBorrowDays} onChange={handleChange}
+                       min={1} max={365} className="input" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Late fee (₹ / day)</label>
+                <input type="number" name="lateFeePerDay" value={formData.lateFeePerDay} onChange={handleChange}
+                       min={0} step="1" className="input" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Security deposit (₹)</label>
+                <input type="number" name="securityDeposit" value={formData.securityDeposit} onChange={handleChange}
+                       min={0} step="1" className="input" />
+              </div>
             </div>
 
             <div>

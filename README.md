@@ -1,3 +1,9 @@
+> ## 🔔 Latest release notes
+>
+> This build removes Redis entirely and re‑implements chat on Spring's in‑memory STOMP broker (MySQL‑persisted). It adds a **Borrow Request workflow** (request → accept/reject → return with automatic late‑fee calculation), **Favorites/wishlist**, a **personal Dashboard**, richer item metadata (condition, max borrow days, late fee, security deposit, borrow count), sorting, stronger client + server validation, and a fully protected, session‑aware auth flow (Login/Register hidden once authenticated).
+>
+> See **[ENHANCEMENTS.md](ENHANCEMENTS.md)** for the full status, known limitations, roadmap, and the free deployment guide. Stack stays limited to **Java · Spring Boot · MySQL · React** — no Docker/Redis/Kubernetes/cloud services.
+
 # 🌱 EcoTrack — Local Community Sharing Platform
 
 A production-grade microservices platform where neighbors can share and lend tools and items within a local community. Built with **Java 17**, **Spring Boot 3.2**, **Spring Cloud 2023.0**, **MySQL**, **WebSocket/STOMP**, **Netflix Eureka**, and a **React + Tailwind** frontend — designed to run entirely on a local machine with only a JDK, Maven, Node, and MySQL (no Redis or other infrastructure required).

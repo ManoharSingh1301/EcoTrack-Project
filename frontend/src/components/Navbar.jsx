@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Leaf, Package, User, LogOut, LogIn, UserPlus, Moon, Sun, Menu, X, List, MessageCircle } from 'lucide-react';
+import { Leaf, Package, User, LogOut, LogIn, UserPlus, Moon, Sun, Menu, X, List, MessageCircle, LayoutDashboard, Inbox, Heart } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useState } from 'react';
 
@@ -95,12 +95,36 @@ function Navbar({ user, onLogout }) {
                   <span className="font-medium">{user.username}</span>
                 </div>
                 <Link
+                  to="/dashboard"
+                  className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 px-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                  <span>Dashboard</span>
+                </Link>
+                <Link
                   to="/items"
                   className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 px-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <Package className="w-5 h-5" />
                   <span>Browse Items</span>
+                </Link>
+                <Link
+                  to="/borrow-requests"
+                  className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 px-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Inbox className="w-5 h-5" />
+                  <span>Borrow Requests</span>
+                </Link>
+                <Link
+                  to="/favorites"
+                  className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 px-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Heart className="w-5 h-5" />
+                  <span>Favorites</span>
                 </Link>
                 <Link
                   to="/my-items"

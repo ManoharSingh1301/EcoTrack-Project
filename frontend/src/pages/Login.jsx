@@ -21,7 +21,7 @@ function Login({ onLogin }) {
     try {
       const response = await usersApi.login(formData);
       onLogin(response.data);
-      navigate('/items');
+      navigate('/dashboard');
     } catch (err) {
       console.error('Login error:', err);
       if (err.response?.data) {

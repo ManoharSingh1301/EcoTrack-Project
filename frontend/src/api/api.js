@@ -90,6 +90,37 @@ export const usersApi = {
   deleteUser: (id) => api.delete(`/api/users/${id}`),
 };
 
+// Item condition options shared by the create form and cards
+export const CONDITIONS = [
+  { value: 'NEW', label: 'New' },
+  { value: 'LIKE_NEW', label: 'Like New' },
+  { value: 'GOOD', label: 'Good' },
+  { value: 'FAIR', label: 'Fair' },
+  { value: 'WORN', label: 'Worn' },
+];
+
+// Allowed borrow durations (days)
+export const BORROW_DURATIONS = [1, 3, 7, 15, 30];
+
+// Borrow Request workflow API
+export const borrowApi = {
+  create: (payload) => api.post('/api/borrow-requests', payload),
+  incoming: () => api.get('/api/borrow-requests/incoming'),
+  outgoing: () => api.get('/api/borrow-requests/outgoing'),
+  accept: (id) => api.patch(`/api/borrow-requests/${id}/accept`),
+  reject: (id) => api.patch(`/api/borrow-requests/${id}/reject`),
+  cancel: (id) => api.patch(`/api/borrow-requests/${id}/cancel`),
+  markReturned: (id) => api.patch(`/api/borrow-requests/${id}/return`),
+};
+
+// Favorites / wishlist API
+export const favoritesApi = {
+  list: () => api.get('/api/favorites'),
+  ids: () => api.get('/api/favorites/ids'),
+  add: (itemId) => api.post(`/api/favorites/${itemId}`),
+  remove: (itemId) => api.delete(`/api/favorites/${itemId}`),
+};
+
 // Chat API (REST history; live messages go over WebSocket/STOMP)
 export const chatApi = {
   getHistory: (user1Id, user2Id, itemId) =>

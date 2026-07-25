@@ -41,6 +41,27 @@ public class Item {
     @Column(nullable = false)
     private Boolean available = true;
 
+    // 🔹 Borrowing metadata (enhancement)
+    /** Physical condition: NEW, LIKE_NEW, GOOD, FAIR, WORN. */
+    @Column(name = "item_condition")
+    private String condition = "GOOD";
+
+    /** Maximum number of days the item may be borrowed for. */
+    @Column(name = "max_borrow_days")
+    private Integer maxBorrowDays = 7;
+
+    /** Fine charged per day when returned after the due date. */
+    @Column(name = "late_fee_per_day")
+    private Double lateFeePerDay = 0.0;
+
+    /** Optional refundable security deposit. */
+    @Column(name = "security_deposit")
+    private Double securityDeposit = 0.0;
+
+    /** How many times this item has been successfully borrowed. */
+    @Column(name = "borrow_count")
+    private Integer borrowCount = 0;
+
     // 🔹 Image Fields
     @Lob
     @Column(name = "image_data", columnDefinition = "LONGBLOB")
@@ -131,6 +152,46 @@ public class Item {
 
     public void setAvailable(Boolean available) {
         this.available = available;
+    }
+
+    public String getCondition() {
+        return condition;
+    }
+
+    public void setCondition(String condition) {
+        this.condition = condition;
+    }
+
+    public Integer getMaxBorrowDays() {
+        return maxBorrowDays;
+    }
+
+    public void setMaxBorrowDays(Integer maxBorrowDays) {
+        this.maxBorrowDays = maxBorrowDays;
+    }
+
+    public Double getLateFeePerDay() {
+        return lateFeePerDay;
+    }
+
+    public void setLateFeePerDay(Double lateFeePerDay) {
+        this.lateFeePerDay = lateFeePerDay;
+    }
+
+    public Double getSecurityDeposit() {
+        return securityDeposit;
+    }
+
+    public void setSecurityDeposit(Double securityDeposit) {
+        this.securityDeposit = securityDeposit;
+    }
+
+    public Integer getBorrowCount() {
+        return borrowCount;
+    }
+
+    public void setBorrowCount(Integer borrowCount) {
+        this.borrowCount = borrowCount;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -4,62 +4,63 @@
 Write-Host "🌱 Starting EcoTrack Microservices Platform..." -ForegroundColor Green
 Write-Host ""
 
-# Function to start a service in a new PowerShell window
-function Start-Service {
+function Start-EcoTrackService {
     param(
         [string]$ServiceName,
         [string]$ServicePath,
         [string]$Command,
         [int]$WaitSeconds
     )
-    
+
     Write-Host "Starting $ServiceName..." -ForegroundColor Yellow
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$ServicePath'; Write-Host '🚀 Starting $ServiceName' -ForegroundColor Cyan; $Command"
-    
+    $commandText = @"
+Set-Location '$ServicePath'
+`$env:DB_USERNAME = 'root'
+`$env:DB_PASSWORD = 'password'
+`$env:JWT_SECRET = 'dev-secret'
+Write-Host '🚀 Starting $ServiceName' -ForegroundColor Cyan
+$Command
+"@
+
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", $commandText
+
     if ($WaitSeconds -gt 0) {
         Write-Host "Waiting $WaitSeconds seconds for $ServiceName to initialize..." -ForegroundColor Gray
         Start-Sleep -Seconds $WaitSeconds
     }
 }
 
-# Get the current directory
-$ProjectRoot = Get-Location
+$ProjectRoot = $PSScriptRoot
 
-# Start Discovery Server (Eureka) - Wait 30 seconds
-Start-Service -ServiceName "Discovery Server (Eureka)" `
-              -ServicePath "$ProjectRoot\discovery-server" `
-              -Command "mvn spring-boot:run" `
-              -WaitSeconds 30
+Start-EcoTrackService -ServiceName "Discovery Server (Eureka)" `
+    -ServicePath "$ProjectRoot\discovery-server" `
+    -Command "mvn spring-boot:run" `
+    -WaitSeconds 30
 
-# Start API Gateway - Wait 20 seconds
-Start-Service -ServiceName "API Gateway" `
-              -ServicePath "$ProjectRoot\api-gateway" `
-              -Command "mvn spring-boot:run" `
-              -WaitSeconds 20
+Start-EcoTrackService -ServiceName "API Gateway" `
+    -ServicePath "$ProjectRoot\api-gateway" `
+    -Command "mvn spring-boot:run" `
+    -WaitSeconds 20
 
-# Start Item Service - Wait 15 seconds
-Start-Service -ServiceName "Item Service" `
-              -ServicePath "$ProjectRoot\item-service" `
-              -Command "mvn spring-boot:run" `
-              -WaitSeconds 15
+Start-EcoTrackService -ServiceName "Item Service" `
+    -ServicePath "$ProjectRoot\item-service" `
+    -Command "mvn spring-boot:run" `
+    -WaitSeconds 15
 
-# Start User Service - Wait 15 seconds
-Start-Service -ServiceName "User Service" `
-              -ServicePath "$ProjectRoot\user-service" `
-              -Command "mvn spring-boot:run" `
-              -WaitSeconds 15
+Start-EcoTrackService -ServiceName "User Service" `
+    -ServicePath "$ProjectRoot\user-service" `
+    -Command "mvn spring-boot:run" `
+    -WaitSeconds 15
 
-# Start Communication Service - Wait 15 seconds
-Start-Service -ServiceName "Communication Service" `
-              -ServicePath "$ProjectRoot\communication" `
-              -Command "mvn spring-boot:run" `
-              -WaitSeconds 15
+Start-EcoTrackService -ServiceName "Communication Service" `
+    -ServicePath "$ProjectRoot\communication" `
+    -Command "mvn spring-boot:run" `
+    -WaitSeconds 15
 
-# Start Frontend - No wait needed
-Start-Service -ServiceName "React Frontend" `
-              -ServicePath "$ProjectRoot\frontend" `
-              -Command "npm run dev" `
-              -WaitSeconds 0
+Start-EcoTrackService -ServiceName "React Frontend" `
+    -ServicePath "$ProjectRoot\frontend" `
+    -Command "npm install; npm run dev -- --host 0.0.0.0" `
+    -WaitSeconds 0
 
 Write-Host ""
 Write-Host "✅ All services are starting!" -ForegroundColor Green

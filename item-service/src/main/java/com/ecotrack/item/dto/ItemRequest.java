@@ -1,7 +1,10 @@
 package com.ecotrack.item.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,4 +31,17 @@ public class ItemRequest {
     private String category;
 
     private Boolean available = true;
+
+    /** NEW, LIKE_NEW, GOOD, FAIR, WORN. */
+    private String condition;
+
+    @Min(value = 1, message = "Borrow duration must be at least 1 day")
+    @Max(value = 365, message = "Borrow duration cannot exceed 365 days")
+    private Integer maxBorrowDays;
+
+    @PositiveOrZero(message = "Late fee cannot be negative")
+    private Double lateFeePerDay;
+
+    @PositiveOrZero(message = "Security deposit cannot be negative")
+    private Double securityDeposit;
 }
