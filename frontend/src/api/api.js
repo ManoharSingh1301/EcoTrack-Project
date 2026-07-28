@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
-// Exported so the chat page can open the SockJS/STOMP connection through the gateway.
+// Exported so the chat page can open the SockJS/STOMP connection to the backend.
 export const API_URL = API_BASE_URL;
 
 // Categories shared by the create form and the browse filter

@@ -55,6 +55,9 @@ Thumbs.db
 **/*.db
 **/*.sqlite
 
-# Environment
+# Environment (never commit real secrets; .env.example IS tracked)
 .env
 .env.local
+!**/.env.example
+
+# Maven wrapper jar is fine to ignore; use a system Maven per the setup guide
