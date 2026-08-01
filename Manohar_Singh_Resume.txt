@@ -1,0 +1,396 @@
+\documentclass[10pt, letterpaper]{article}
+
+% Packages:
+\usepackage[
+    ignoreheadfoot, % set margins without considering header and footer
+    top=1 cm, % seperation between body and page edge from the top
+    bottom=1 cm, % seperation between body and page edge from the bottom
+    left=1 cm, % seperation between body and page edge from the left
+    right=1 cm, % seperation between body and page edge from the right
+    footskip=1 cm, % seperation between body and footer
+    % showframe % for debugging
+]{geometry} % for adjusting page geometry
+\usepackage{titlesec} % for customizing section titles
+\usepackage{tabularx} % for making tables with fixed width columns
+\usepackage{array} % tabularx requires this
+\usepackage[dvipsnames]{xcolor} % for coloring text
+\definecolor{primaryColor}{RGB}{0, 0, 150} % define primary color
+% \definecolor{customColor}{RGB}{255, 102, 102} % light red
+
+\usepackage{enumitem} % for customizing lists
+\usepackage{fontawesome5} % for using icons
+\usepackage{amsmath} % for math
+\usepackage[
+    pdftitle={Manohar Singh's CV},
+    pdfauthor={Manohar Singh},
+    pdfcreator={LaTeX with RenderCV},
+    colorlinks=true,
+    urlcolor=primaryColor
+]{hyperref} % for links, metadata and bookmarks
+\usepackage[pscoord]{eso-pic} % for floating text on the page
+\usepackage{calc} % for calculating lengths
+\usepackage{bookmark} % for bookmarks
+\usepackage{lastpage} % for getting the total number of pages
+\usepackage{changepage} % for one column entries (adjustwidth environment)
+\usepackage{paracol} % for two and three column entries
+\usepackage{ifthen} % for conditional statements
+\usepackage{needspace} % for avoiding page brake right after the section title
+\usepackage{iftex} % check if engine is pdflatex, xetex or luatex
+
+% Ensure that generate pdf is machine readable/ATS parsable:
+\ifPDFTeX
+    \input{glyphtounicode}
+    \pdfgentounicode=1
+    % \usepackage[T1]{fontenc} % this breaks sb2nov
+    \usepackage[utf8]{inputenc}
+    \usepackage{lmodern}
+\fi
+
+
+
+% Some settings:
+\AtBeginEnvironment{adjustwidth}{\partopsep0pt} % remove space before adjustwidth environment
+\pagestyle{empty} % no header or footer
+\setcounter{secnumdepth}{0} % no section numbering
+\setlength{\parindent}{0pt} % no indentation
+\setlength{\topskip}{0pt} % no top skip
+\setlength{\columnsep}{0cm} % set column seperation
+\makeatletter
+\let\ps@customFooterStyle\ps@plain % Copy the plain style to customFooterStyle
+\patchcmd{\ps@customFooterStyle}{\thepage}% replace number by desired string
+\makeatother
+\pagestyle{customFooterStyle}
+
+% \titleformat{\section}{\needspace{4\baselineskip}\bfseries\large}{}{0pt}{}[\vspace{1pt}\titlerule]
+\titleformat{\section}{\needspace{4\baselineskip}\bfseries\large\color{primaryColor}}{}{0pt}{}[\vspace{1pt}\titlerule]
+
+
+
+
+\titlespacing{\section}{
+    % left space:
+    -1pt
+}{
+    % top space:
+    0.3 cm
+}{
+    % bottom space:
+    0.2 cm
+} % section title spacing
+\usepackage[
+    ignoreheadfoot,
+    top=0.50 cm,  % reduced top margin
+    bottom=0.50 cm,  % reduced bottom margin
+    left=0.50 cm,  % reduced left margin
+    right=0.50 cm,  % reduced right margin
+    footskip=0.5 cm % reduced footer margin
+]{geometry}
+
+\renewcommand\labelitemi{$\circ$} % custom bullet points
+\newenvironment{highlights}{
+    \begin{itemize}[
+        topsep=0.10 cm,
+        parsep=0.10 cm,
+        partopsep=0pt,
+        itemsep=0pt,
+        leftmargin=0.4 cm + 10pt
+    ]
+}{
+    \end{itemize}
+} % new environment for highlights
+
+\newenvironment{highlightsforbulletentries}{
+    \begin{itemize}[
+        topsep=0.10 cm,
+        parsep=0.10 cm,
+        partopsep=0pt,
+        itemsep=0pt,
+        leftmargin=10pt
+    ]
+}{
+    \end{itemize}
+} % new environment for highlights for bullet entries
+
+
+\newenvironment{onecolentry}{
+    \begin{adjustwidth}{
+        0.2 cm + 0.00001 cm
+    }{
+        0.2 cm + 0.00001 cm
+    }
+}{
+    \end{adjustwidth}
+} % new environment for one column entries
+
+\newenvironment{twocolentry}[2][]{
+    \onecolentry
+    \def\secondColumn{#2}
+    \setcolumnwidth{\fill, 6.0 cm}
+    \begin{paracol}{2}
+}{
+    \switchcolumn \raggedleft \secondColumn
+    \end{paracol}
+    \endonecolentry
+} % new environment for two column entries
+
+\newenvironment{header}{
+    \setlength{\topsep}{0pt}\par\kern\topsep\centering\linespread{1.5}
+}{
+    \par\kern\topsep
+} % new environment for the header
+
+\newcommand{\placelastupdatedtext}{% \placetextbox{<horizontal pos>}{<vertical pos>}{<stuff>}
+  \AddToShipoutPictureFG*{% Add <stuff> to current page foreground
+    \put(
+        \LenToUnit{\paperwidth-2 cm-0.2 cm+0.05cm},
+        \LenToUnit{\paperheight-1.0 cm}
+    ){\vtop{{\null}\makebox[0pt][c]{
+    }}}%
+  }%
+}%
+
+% save the original href command in a new command:
+\let\hrefWithoutArrow\href
+
+% new command for external links:
+\renewcommand{\href}[2]{\hrefWithoutArrow{#1}{\ifthenelse{\equal{#2}{}}{ }{#2 }\raisebox{.15ex}{\footnotesize \faExternalLink*}}}
+
+
+\begin{document}
+    \newcommand{\AND}{\unskip
+        \cleaders\copy\ANDbox\hskip\wd\ANDbox
+        \ignorespaces
+    }
+    \newsavebox\ANDbox
+    \sbox\ANDbox{}
+
+    \placelastupdatedtext
+% ===================== HEADER =====================
+\begin{header}
+    \textbf{\fontsize{24 pt}{24 pt}\selectfont MANOHAR SINGH}
+
+    \vspace{0.10 cm}
+
+    \mbox{\hrefWithoutArrow{mailto:burathimannu@gmail.com}{
+    \color{black}{\footnotesize\faEnvelope[regular]}\hspace*{0.13cm}burathimannu@gmail.com}}%
+    \kern 0.25 cm%
+    \AND%
+    \kern 0.25 cm%
+    \mbox{\hrefWithoutArrow{tel:+916399121342}{
+    \color{black}{\footnotesize\faPhone*}\hspace*{0.13cm}+91 6399121342}}%
+    \kern 0.25 cm%
+    \AND%
+    \kern 0.25 cm%
+    \mbox{{\color{black}{\footnotesize\faMapMarker*}}\hspace*{0.13cm}Dehradun, India}%
+    \kern 0.25 cm%
+    \AND%
+    \kern 0.25 cm%
+    \mbox{\hrefWithoutArrow{https://manoharsingh1311.github.io/Manohar-Portfolio/}{
+    \color{black}{\footnotesize\faLink}\hspace*{0.13cm}Portfolio}}%
+    \kern 0.25 cm%
+    \AND%
+    \kern 0.25 cm%
+    \mbox{\hrefWithoutArrow{https://www.linkedin.com/in/manohar-singh-a50390222/}{
+    \color{black}{\footnotesize\faLinkedinIn}\hspace*{0.13cm}LinkedIn}}%
+    \kern 0.25 cm%
+    \AND%
+    \kern 0.25 cm%
+    \mbox{\hrefWithoutArrow{https://github.com/ManoharSingh1311}{
+    \color{black}{\footnotesize\faGithub}\hspace*{0.13cm}GitHub}}%
+
+\end{header}
+
+% ===================== SUMMARY =====================
+\section{SUMMARY}
+
+\begin{onecolentry}
+Java Backend Developer with hands-on experience building RESTful APIs and backend services using Java, Spring Boot, and MySQL. Strong foundation in OOP, Data Structures \& Algorithms (500+ problems solved), and the full software development life cycle, with a track record of shipping full-stack projects and collaborating effectively in Agile teams.
+\end{onecolentry}
+
+% ===================== EDUCATION =====================
+\section{EDUCATION}
+
+\begin{twocolentry}{
+\textit{Sep 2021 -- Jul 2025}}
+\textbf{Graphic Era Hill University, Dehradun, India}
+\\
+\textit{Bachelor of Technology (B.Tech) in Computer Science and Engineering}
+\end{twocolentry}
+
+\vspace{0.10 cm}
+\begin{onecolentry}
+\begin{highlights}
+\item CGPA: 7.99 / 10.0
+\end{highlights}
+\end{onecolentry}
+
+\vspace{-0.10 cm}
+
+% ===================== EXPERIENCE =====================
+\section{EXPERIENCE}
+
+\begin{twocolentry}{
+\textit{Nov 2025 -- Present}
+}
+\textbf{Java Backend Developer}
+\\
+\textit{Cognizant}
+\end{twocolentry}
+
+\begin{onecolentry}
+\begin{highlights}
+\item Develop and maintain RESTful APIs using Java and Spring Boot, delivering backend features for a production client application within an Agile/Scrum environment.
+\item Design and optimize relational database schemas and SQL queries in MySQL, improving data-access reliability and reducing redundant queries across core services.
+\item Build modular, service-oriented backend components integrated with front-end teams through well-documented REST contracts, validated using Postman.
+\item Collaborate through Git-based workflows (feature branching, pull requests, and code reviews) and contribute to sprint planning, stand-ups, unit testing, and debugging across the SDLC.
+\end{highlights}
+\end{onecolentry}
+
+% ======== TRAINING & INTERNSHIPS ===============%
+\section{TRAINING \& INTERNSHIPS}
+
+\begin{twocolentry}{
+\textit{Aug 2024 -- Sep 2024}
+}
+\textbf{Machine Learning Intern}
+\hspace{4pt}
+\href{https://github.com/ManoharSingh1311/GeminiDecode-Multilanguage-Document-Extraction-by-Gemini-Pro-By-Smartinternz}{\faGithub}
+\hspace{6pt}
+\href{https://skillwallet.smartinternz.com/certificate/virtual-internship/840c3eda3ea42ecd90aeb3434f3510b7}{Certificate}
+
+\textit{Skillwallet (Google Cloud Generative AI)}
+\end{twocolentry}
+
+\vspace{0.05cm}
+
+\begin{onecolentry}
+\begin{highlights}
+\item Created \textbf{GeminiDecode}, a multilingual document extraction tool using Google Cloud Generative AI.
+\end{highlights}
+\end{onecolentry}
+
+\vspace{0.10cm}
+
+\begin{twocolentry}{
+\textit{Jul 2024 -- Aug 2024}
+}
+\textbf{Salesforce Developer Intern}
+\hspace{4pt}
+\href{https://github.com/ManoharSingh1311/RentEase-A-Comprehensive-Salesforce-CRM-for-Laptop-Rental-Services}{\faGithub}
+\hspace{6pt}
+\href{https://skillwallet.smartinternz.com/internships/salesforce_certificates/fb3a30a2e3e8abdcbf63f0aaaadb06e4}{Certificate}
+
+\textit{Skillwallet (Salesforce)}
+\end{twocolentry}
+
+\vspace{0.05cm}
+
+\begin{onecolentry}
+\begin{highlights}
+\item Developed \textbf{RentEase}, a laptop rental management system using Salesforce Apex and Lightning Web Components (LWC).
+\end{highlights}
+\end{onecolentry}
+
+% ===================== PROJECTS =====================
+
+\section{PROJECTS}
+
+\begin{twocolentry}{
+\textit{Feb 2026}
+}
+\textbf{Oil \& Gas Asset \& Operations Management System}
+\hspace{4pt}
+\href{https://github.com/ManoharSingh1311/Oil-Gas-Asset-Operations-Management-System}{\faGithub}
+\end{twocolentry}
+
+\vspace{0.05cm}
+
+\begin{onecolentry}
+\begin{highlights}
+\item Built an enterprise-grade Oil \& Gas asset management platform using Spring Boot microservices, REST APIs, API Gateway, Eureka, and Feign Clients to manage assets, production, maintenance, and compliance.
+\item Designed scalable backend services with MySQL and integrated them with a React.js frontend, enabling role-based access, analytics dashboards, and production workflows.
+\end{highlights}
+\end{onecolentry}
+
+\vspace{0.10cm}
+
+\begin{twocolentry}{
+\textit{May 2026}
+}
+\textbf{EcoTrack: Community Sharing Platform}
+\hspace{4pt}
+\href{https://github.com/ManoharSingh1311/EcoTrack}{\faGithub}
+\end{twocolentry}
+
+\vspace{0.05cm}
+
+\begin{onecolentry}
+\begin{highlights}
+\item Created a microservices-based community sharing platform using Spring Boot, REST APIs, API Gateway, Eureka, and Feign Clients for user management, item sharing, and community interactions.
+\item Implemented backend services with MySQL and integrated them with a React.js frontend, enabling secure item sharing and real-time communication.
+\end{highlights}
+\end{onecolentry}
+
+% ===================== RESEARCH PUBLICATIONS =====================
+\section{RESEARCH PUBLICATIONS}
+
+\begin{twocolentry}{
+\textit{Dec 2025}}
+\textbf{Analysis of Soft Tissue Tumors Using CNN Classifier}
+\\
+\textit{IEEE OITS International Conference on Information Technology (OCIT 2025)}
+\end{twocolentry}
+
+\vspace{0.15 cm}
+\begin{onecolentry}
+\begin{highlights}
+\item Co-authored an IEEE paper on medical image classification using CNN and MRI data
+\href{https://doi.org/10.1109/OCIT66168.2025.11400071}{(DOI Link)}.
+\end{highlights}
+\end{onecolentry}
+
+
+% ===================== TECHNICAL SKILLS =====================
+\section{TECHNICAL SKILLS}
+
+\begin{onecolentry}
+\textbf{Languages:} Java, Python, JavaScript, SQL
+\vspace{0.10 cm}
+
+\textbf{Frameworks \& Libraries:} Spring Boot, Spring Data JPA, Hibernate, React.js, HTML, CSS \vspace{0.10 cm}
+
+\textbf{Databases \& Tools:} MySQL, Git, GitHub, Maven, Postman, JUnit
+\vspace{0.10  cm}
+
+\textbf{Core Concepts:} OOP, DSA, DBMS, SDLC, Agile/Scrum, REST APIs, Microservices
+\end{onecolentry}
+
+% ===================== ACHIEVEMENTS =====================
+\section{ACHIEVEMENTS \& VERIFICATIONS}
+
+\begin{samepage}
+
+\begin{twocolentry}{
+\href{https://leetcode.com/u/Manohar_Singh123/}{LeetCode Profile}
+}
+\textbf{Competitive Programming}
+\begin{highlights}
+\item Solved 500+ Data Structures and Algorithms problems on LeetCode and \\ GeeksforGeeks.
+\end{highlights}
+\end{twocolentry}
+
+\vspace{0.05 cm}
+
+\begin{twocolentry}{
+\href{https://drive.google.com/file/d/1t1Ft4INva8WsT3c38j0G8vgks6Q5oKpI/view?usp=drivesdk}{Certificate Link}
+}
+\textbf{National-Level Football Athlete}
+\begin{highlights}
+\item Represented Uttarakhand in national-level football tournaments and secured a 3rd-place finish.
+\end{highlights}
+\end{twocolentry}
+
+\end{samepage}
+
+
+\end{document}
