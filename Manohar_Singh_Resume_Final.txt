@@ -72,10 +72,10 @@
     -1pt
 }{
     % top space:
-    0.3 cm
+    0.18 cm
 }{
     % bottom space:
-    0.2 cm
+    0.12 cm
 } % section title spacing
 \usepackage[
     ignoreheadfoot,
@@ -239,10 +239,9 @@ Java Backend Developer with hands-on experience building RESTful APIs and backen
 
 \begin{onecolentry}
 \begin{highlights}
-\item Develop and maintain RESTful APIs using Java and Spring Boot, delivering backend features for a production client application within an Agile/Scrum environment.
-\item Design and optimize relational database schemas and SQL queries in MySQL, improving data-access reliability and reducing redundant queries across core services.
-\item Build modular, service-oriented backend components integrated with front-end teams through well-documented REST contracts, validated using Postman.
-\item Collaborate through Git-based workflows (feature branching, pull requests, and code reviews) and contribute to sprint planning, stand-ups, unit testing, and debugging across the SDLC.
+\item Develop and maintain RESTful APIs using Java and Spring Boot, delivering backend features for a production client application in an Agile/Scrum environment.
+\item Design and optimize relational schemas and SQL queries in MySQL, improving data-access reliability and reducing redundant queries across core services.
+\item Build modular backend components integrated with front-end teams via documented REST contracts, and contribute to Git workflows (branching, pull requests, code reviews), unit testing, and debugging across the SDLC.
 \end{highlights}
 \end{onecolentry}
 
@@ -269,7 +268,7 @@ Java Backend Developer with hands-on experience building RESTful APIs and backen
 \end{highlights}
 \end{onecolentry}
 
-\vspace{0.10cm}
+\vspace{0.05cm}
 
 \begin{twocolentry}{
 \textit{Jul 2024 -- Aug 2024}
@@ -312,7 +311,7 @@ Java Backend Developer with hands-on experience building RESTful APIs and backen
 \end{highlights}
 \end{onecolentry}
 
-\vspace{0.10cm}
+\vspace{0.05cm}
 
 \begin{twocolentry}{
 \textit{May 2026}
